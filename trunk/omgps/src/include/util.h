@@ -29,7 +29,6 @@ typedef struct __pthread_context_t
 	char *name;
 	pthread_t tid;
 	char *arg;
-	gboolean gdk_locked;
 	thread_cleanup_func_t cleanup_func;
 	gboolean is_main_thread;
 	char errbuf[ERRBUF_LEN];

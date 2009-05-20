@@ -759,11 +759,11 @@ GtkWidget * ctx_tab_agps_online_create()
 	mouse_agpsonline_handler.release_handler = mouse_released;
 	mouse_agpsonline_handler.motion_handler = NULL;
 
-    GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
+	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
 
-    GtkWidget *title_label = gtk_label_new("");
-    gtk_label_set_markup(GTK_LABEL(title_label), "<span weight='bold'>U-BLOX AGPS online</span>");
-    GtkWidget *sep = gtk_hseparator_new();
+	GtkWidget *title_label = gtk_label_new("");
+	gtk_label_set_markup(GTK_LABEL(title_label), "<span weight='bold'>U-BLOX AGPS online</span>");
+	GtkWidget *sep = gtk_hseparator_new();
 
 	gtk_container_add(GTK_CONTAINER (vbox), title_label);
 	gtk_container_add(GTK_CONTAINER (vbox), sep);

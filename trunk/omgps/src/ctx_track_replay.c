@@ -610,9 +610,9 @@ GtkWidget* ctx_tab_track_replay_create()
 
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
 
-    title_label = gtk_label_new("");
+	title_label = gtk_label_new("");
 
-    GtkWidget *sep = gtk_hseparator_new();
+	GtkWidget *sep = gtk_hseparator_new();
 
 	gtk_container_add(GTK_CONTAINER (vbox), title_label);
 	gtk_container_add(GTK_CONTAINER (vbox), sep);

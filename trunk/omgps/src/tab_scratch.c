@@ -215,10 +215,10 @@ void ctx_tab_scratch_on_show()
 GtkWidget * ctx_tab_scratch_create()
 {
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
-    GtkWidget *title_label = gtk_label_new("");
+	GtkWidget *title_label = gtk_label_new("");
 
-    gtk_label_set_markup(GTK_LABEL(title_label), "<span weight='bold'>Scratch on map</span>");
-    GtkWidget *sep = gtk_hseparator_new();
+	gtk_label_set_markup(GTK_LABEL(title_label), "<span weight='bold'>Scratch on map</span>");
+	GtkWidget *sep = gtk_hseparator_new();
 
 	gtk_container_add(GTK_CONTAINER (vbox), title_label);
 	gtk_container_add(GTK_CONTAINER (vbox), sep);

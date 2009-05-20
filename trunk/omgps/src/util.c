@@ -250,7 +250,7 @@ gboolean exec_linux_cmd(char *candidates[], int n, char *args[])
 	} else {
 		if (waitpid(pid, &statloc, 0) != pid)
 			return FALSE;
-		if (!(WIFEXITED(statloc) &&	WEXITSTATUS(statloc) == 0))
+		if (!(WIFEXITED(statloc) && WEXITSTATUS(statloc) == 0))
 			return FALSE;
 		return TRUE;
 	}
@@ -275,7 +275,6 @@ pthread_context_t * register_thread(char *name, void *arg, thread_cleanup_func_t
 	ctx->arg = arg;
 	ctx->cleanup_func = cleanup_func;
 	ctx->is_main_thread = FALSE;
-	ctx->gdk_locked = FALSE;
 	pthread_setspecific(thread_key, ctx);
 
 	return ctx;

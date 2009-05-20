@@ -887,7 +887,7 @@ gboolean map_init()
 {
 	init_tile_converter(MAX_ZOOM_LEVELS);
 
-	/* Note accurate, see the earth as a sphere */
+	/* Not accurate, just see the earth as a standard sphere */
 
 	long double d = 2.0 * M_PI * WGS84_SEMI_MAJOR_AXIS;
 	int i;
@@ -948,7 +948,7 @@ GtkWidget * view_tab_create()
 	g_signal_connect (drawingarea, "expose-event",
 		G_CALLBACK(drawing_area_expose_event), NULL);
 
-    GtkWidget *topbox = gtk_hbox_new(TRUE, 2);
+	GtkWidget *topbox = gtk_hbox_new(TRUE, 2);
 
 	menu_button = gtk_button_new_with_label("Menu");
 	gtk_button_set_relief(GTK_BUTTON(menu_button), GTK_RELIEF_HALF);
@@ -1013,7 +1013,6 @@ GtkWidget * view_tab_create()
 	gtk_box_pack_start(GTK_BOX (vbox), topbox, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX (vbox), drawingarea, TRUE, TRUE, 0);
 	gtk_box_pack_end(GTK_BOX (vbox), ctx_vbox, FALSE, FALSE, 0);
-
 
 	return vbox;
 }

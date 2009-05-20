@@ -396,20 +396,11 @@ static void poll_by_ubx_binary()
 	pollsv = check_pollsv();
 
 	if (ubx_poll_group(pollsv)) {
-		/*
-		log_debug("fix type=0x%02x, flags=0x%02x, lat=%lf, lon=%lf, hacc=%5.1f, "
-			"h=%5.1f, vacc=%5.1f, llh_valid=%d",
-			g_gpsdata.nav_status_fixtype, g_gpsdata.nav_status_flags,
-			g_gpsdata.lat, g_gpsdata.lon, g_gpsdata.hacc,
-			g_gpsdata.height, g_gpsdata.vacc, g_gpsdata.llh_valid);
-		*/
-
 		LOCK_UI();
 		if (g_gpsdata.nav_status_fixtype < 0x03)
 			g_gpsdata.height_valid = FALSE;
 		on_new_record();
 		UNLOCK_UI();
-
 	} else {
 		error = TRUE;
 		goto END;
