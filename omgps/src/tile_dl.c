@@ -20,8 +20,7 @@ static batch_dl_t *pending_free_list = NULL;
 static batch_dl_t *pending_free_list_tail = NULL;
 
 /**
- * Test if a tile file exists.
- * tile->path is updated!
+ * Format tile fullpath to <buf>
  */
 gboolean format_tile_file_path(map_repo_t *repo, int zoom, int x, int y, char *buf, int buflen)
 {
@@ -275,9 +274,7 @@ void download_cancel_batch(batch_dl_t *batch)
 /**
  *
  * The behavior is similiar to pthread_cond_timedwait();
- *
- * NOTE:
- * when this function is called by a thread, td->lock is locked
+ * NOTE: when this function is called by a thread, td->lock is locked
  */
 static void download_next_batch(tile_downloader_t *td)
 {

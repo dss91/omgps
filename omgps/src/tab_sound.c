@@ -100,7 +100,7 @@ GtkWidget * sound_tab_create()
 		warn_dialog("unable to list files from sound directory");
 	} else {
 		char buf[256], buf1[256];
-		/* sound_<x>.py */
+		/* sound.py */
 		while ((ep = readdir (dp))) {
 			if (ep->d_type != DT_LNK && ep->d_type != DT_REG)
 				continue;

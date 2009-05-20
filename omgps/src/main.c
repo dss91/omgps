@@ -18,7 +18,6 @@
 #include "customized.h"
 #include "track.h"
 
-/* ALL dialogs are modal, so we use one handle */
 static pthread_mutex_t cleanup_lock = PTHREAD_MUTEX_INITIALIZER;
 static char pid_file[128];
 static int pid_fd = -1;
@@ -241,7 +240,7 @@ static void create_dirs()
 }
 
 /**
- * SYSCONF_DIR is define by Makefile.am
+ * ETCCONF_DIR is defined in Makefile.am
  */
 static void link_config_files()
 {
@@ -260,7 +259,7 @@ static void link_config_files()
 		warn_dialog("unable to list files in config dir");
 		exit(0);
 	}
-	/* sound_<x>.py */
+
 	while ((ep = readdir (dp))) {
 		fname = ep->d_name;
 		if (ep->d_type == DT_DIR) /* . and .. */

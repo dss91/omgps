@@ -399,7 +399,7 @@ GtkWidget * ctx_tab_gps_fix_create()
 {
 	memset(last_nav_text, 0, nav_da_fonts);
 
-    GtkWidget *hbox = gtk_hbox_new(FALSE, 0);
+	GtkWidget *hbox = gtk_hbox_new(FALSE, 0);
 
 	GtkWidget *nav_hbox = gtk_hbox_new(TRUE, 0);
 
