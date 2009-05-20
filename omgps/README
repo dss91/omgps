@@ -1,0 +1,15 @@
+Omgps is a GPS application for OpenMolo mobile phone.
+
+By default, omgps connects to serial with builtin UBX binary protocol as data provider.
+The default data provider is very efficient as of CPU usage.
+If conflicts is detected when reading/writing to serial port, data provider is 
+automatically switch to FSO ogpsd.
+
+Any map with projection type of "Universal Traverse Mercator" can be used. 
+You can add/modify map configuration in ~/.omgps/config_{version}/map.py.
+Please respect the copyright license of each map that you are using.
+
+Basic sounding for reporting speed, weak signal, and low power. To add a sound scheme,
+Create a configuration file of format "sound_<xxx>.py", and place it into directory 
+~/.omgps/config_{version}/.
+
