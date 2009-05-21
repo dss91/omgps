@@ -313,7 +313,7 @@ gboolean agps_dump_aid_data(gboolean dump_hui)
 	for (i=0; i<count; i++) {
 		if ((stat(config[i].file, &st) != 0) ||
 			(st.st_mtim.tv_sec + config[i].min_interval < time.tv_sec)) {
-			if (dump_aid_data(&config[i])) {
+			if (! dump_aid_data(&config[i])) {
 				ret = FALSE;
 				break;
 			}
