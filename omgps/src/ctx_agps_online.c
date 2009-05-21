@@ -322,10 +322,12 @@ gboolean agps_dump_aid_data(gboolean dump_hui)
 		}
 	}
 
+	ret = (i == count);
+
 	if (ret) {
-		log_info("Dump AID data result: types=%d", count-skip_counter);
+		log_info("Dump AID data result: types=%d", count - skip_counter);
 	} else {
-		log_info("Failed to dump AID data");
+		log_info("Dump AID data: failed");
 	}
 
 	if (! g_context.usart_conflict)
