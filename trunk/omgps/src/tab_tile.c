@@ -415,7 +415,7 @@ GtkWidget * tile_tab_create()
 	g_signal_connect (G_OBJECT(fixmap_button), "clicked", G_CALLBACK (fixmap_button_clicked), NULL);
 	gtk_container_add(GTK_CONTAINER(button_hbox), fixmap_button);
 
-	gtk_box_pack_start(GTK_BOX (vbox), meter_hbox, FALSE, FALSE, 5);
+	gtk_box_pack_start(GTK_BOX (vbox), meter_hbox, FALSE, FALSE, 10);
 	gtk_box_pack_start(GTK_BOX(vbox), maplist_treeview_sw, TRUE, TRUE, 5);
 	gtk_box_pack_start(GTK_BOX(vbox), button_hbox, FALSE, FALSE, 5);
 	gtk_box_pack_start(GTK_BOX(vbox), alpha_hbox, FALSE, FALSE, 5);

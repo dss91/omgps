@@ -535,7 +535,7 @@ static void export_gpx(char *file)
 	time_t tt = start_time;
 	struct tm *tm = gmtime(&tt);
 
-	log_debug("start time=%ld, end time=%ld", start_time, end_time);
+	//log_debug("start time=%ld, end time=%ld", start_time, end_time);
 
 	fprintf(fp_dest, "<gpx version=\"1.1\" creator=\"omgps\""
 			"xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 "
@@ -731,7 +731,7 @@ GtkWidget * track_tab_create()
 	GtkWidget *color_hbox = gtk_hbox_new(FALSE, 5);
 	gtk_box_pack_start(GTK_BOX(vbox), color_hbox, FALSE, FALSE, 5);
 
-	GtkWidget *color_label = gtk_label_new("Set line color: ");
+	GtkWidget *color_label = gtk_label_new(" Set line color: ");
 	gtk_misc_set_alignment(GTK_MISC(color_label), 0.0, 0.5);
 	gtk_container_add (GTK_CONTAINER(color_hbox), color_label);
 
