@@ -86,8 +86,10 @@ static void cleanup()
 END:
 
 #if (PLATFORM_FSO)
-	if (g_context.suspend_disabled)
-		dbus_release_resource("CPU");
+	if (g_context.suspend_disabled) {
+		if (! dbus_release_resource("CPU"))
+			log_warn("Release resource (CPU) failed.");
+	}
 
 	sound_cleanup();
 	dbus_cleanup();
@@ -415,8 +417,12 @@ static void init(gboolean log2console)
 	gtk_widget_show(g_window);
 
 	/* open log before other modules */
-	if (! open_log(log2console? NULL : "omgps.log")) {
-		warn_dialog("can not open log file!, exit");
+
+	char file[256];
+	snprintf(file, sizeof(file), "%s/%s", g_context.top_dir, "omgps.log");
+
+	if (! open_log(log2console? NULL : file)) {
+		warn_dialog("Can not open log file!, exit");
 		exit(0);
 	}
 
@@ -457,7 +463,7 @@ static void init(gboolean log2console)
 	g_context.suspend_disabled = dbus_request_resource("CPU");
 
 	if (! start_poll_thread()) {
-		char *msg = "can't start polling thread";
+		char *msg = "Can't start polling thread";
 		log_error(msg);
 		warn_dialog(msg);
 		exit(0);
