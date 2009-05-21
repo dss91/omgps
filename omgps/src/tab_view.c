@@ -659,11 +659,16 @@ void map_centralize()
 	if (ctx_tab_get_current_id() == CTX_ID_TRACK_REPLAY && g_context.map_view_frozen == TRUE) {
 		track_replay_centralize();
 	} else {
+		if ((g_view.pos_offset.x == (g_view.width >> 1)) && g_view.pos_offset.y == (g_view.height >> 1))
+			return;
+
 		g_view.fglayer.center_pixel = wgs84_to_tilepixel(g_view.pos_wgs84,
 			g_view.fglayer.repo->zoom, g_view.fglayer.repo);
+
 		g_view.center_wgs84 = g_view.pos_wgs84;
 		g_view.pos_offset.x = g_view.width >> 1;
 		g_view.pos_offset.y = g_view.height >> 1;
+
 		map_invalidate_view(TRUE);
 	}
 }
