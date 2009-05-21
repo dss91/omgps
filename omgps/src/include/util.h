@@ -39,7 +39,7 @@ typedef struct __pthread_context_t
 #define LOCK_UI()	gdk_threads_enter()
 #define UNLOCK_UI()	gdk_threads_leave()
 
-extern gboolean open_log(char *file_name);
+extern gboolean open_log(char *file_path);
 extern void close_log();
 extern void gps_log(log_level_t level, const char *fmt,...);
 

@@ -36,25 +36,15 @@ gboolean is_log2console()
 	return log2console;
 }
 
-gboolean open_log(char *file_name)
+gboolean open_log(char *file_path)
 {
-	if (file_name == NULL) {
+	if (file_path == NULL) {
 		log2console = TRUE;
 		logfp = stdout;
 		return TRUE;
 	}
 
-	char *dir = getenv("HOME");
-	struct stat st;
-	if (dir == NULL || stat(dir, &st) < 0)
-		dir = "/var/log";
-
-	char file[256];
-	int n = snprintf(file, sizeof(file), "%s/%s", dir, file_name);
-	if (n <= 0)
-		return FALSE;
-
-	logfp = fopen(file, "w+");
+	logfp = fopen(file_path, "w+");
 	if (logfp == NULL)
 		return FALSE;
 
