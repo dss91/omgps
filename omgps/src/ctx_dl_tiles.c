@@ -421,8 +421,8 @@ static void cancel_batch_button_clicked(GtkCellRenderer *cell, gchar *path_str, 
 static GtkWidget * create_batchlist_treeview()
 {
 	batchlist_treeview = gtk_tree_view_new ();
-	batchlist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_container_add (GTK_CONTAINER (batchlist_treeview_sw), batchlist_treeview);
+	gtk_tree_view_set_reorderable(GTK_TREE_VIEW(batchlist_treeview), FALSE);
+	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (batchlist_treeview), TRUE);
 
 	GtkTreeSelection *sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(batchlist_treeview));
 	gtk_tree_selection_set_mode (sel, GTK_SELECTION_BROWSE);
@@ -431,14 +431,11 @@ static GtkWidget * create_batchlist_treeview()
 	g_signal_connect (G_OBJECT(batchlist_treeview), "cursor-changed",
 		G_CALLBACK (batchlist_treeview_row_selected), NULL);
 
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (batchlist_treeview_sw),
-		GTK_SHADOW_ETCHED_IN);
+	batchlist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (batchlist_treeview_sw), GTK_SHADOW_NONE);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (batchlist_treeview_sw),
 		GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-
-	gtk_tree_view_set_reorderable(GTK_TREE_VIEW(batchlist_treeview), TRUE);
-	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (batchlist_treeview), TRUE);
-	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (batchlist_treeview), FALSE);
+	gtk_container_add (GTK_CONTAINER (batchlist_treeview_sw), batchlist_treeview);
 
 	/* add columns to the tree view */
 	GtkCellRenderer *cell;
@@ -474,19 +471,17 @@ static GtkWidget * create_batchlist_treeview()
 static GtkWidget * create_batchinfo_treeview()
 {
 	batchinfo_treeview = gtk_tree_view_new ();
-	batchinfo_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_container_add (GTK_CONTAINER (batchinfo_treeview_sw), batchinfo_treeview);
+	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (batchinfo_treeview), TRUE);
+	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (batchinfo_treeview), FALSE);
 
 	GtkTreeSelection *sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(batchinfo_treeview));
 	gtk_tree_selection_set_mode (sel, GTK_SELECTION_NONE);
 
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (batchinfo_treeview_sw),
-		GTK_SHADOW_ETCHED_IN);
+	batchinfo_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (batchinfo_treeview_sw), GTK_SHADOW_NONE);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (batchinfo_treeview_sw),
 		GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (batchinfo_treeview), TRUE);
-	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (batchinfo_treeview), FALSE);
+	gtk_container_add (GTK_CONTAINER (batchinfo_treeview_sw), batchinfo_treeview);
 
 	/* add columns to the tree view */
 	GtkCellRenderer *renderer;

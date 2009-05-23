@@ -13,9 +13,10 @@ static GtkWidget *menu_button, *center_button, *zoomin_button, *zoomout_button, 
 static GtkWidget *zoom_label, *status_label;
 static PangoLayout *tile_info_text_layout = NULL;
 
-static mouse_handler_t mouse_dragmap_handler;
-static point_t map_mouse_clicked_point = {-1, -1};;
-static guint map_mouse_clicked_time;
+static mouse_handler_t mouse_handler;
+static point_t clicked_point = {-1, -1};;
+static guint clicked_time;
+static gboolean rightclicked = FALSE;
 
 static pthread_mutex_t change_zoom_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t change_zoom_cond = PTHREAD_COND_INITIALIZER;
@@ -24,8 +25,6 @@ static gboolean stop = FALSE;
 
 /* see macro MAX_ZOOM_LEVELS */
 static char zoom_label_textarray [MAX_ZOOM_LEVELS][3];
-static point_t rightclick_point = {-1, -1};
-static gboolean rightclicked = FALSE;
 
 /* map overlay, alpha-pixel RGB value cache */
 static guchar *pixel_rgb_table = NULL;
@@ -654,7 +653,8 @@ static gboolean drawing_area_expose_event (GtkWidget *widget, GdkEventExpose *ev
 
 void map_centralize()
 {
-	g_context.location_inview = TRUE;
+	g_context.cursor_in_view = TRUE;
+	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Gray], TRUE);
 
 	if (ctx_tab_get_current_id() == CTX_ID_TRACK_REPLAY && g_context.map_view_frozen == TRUE) {
 		track_replay_centralize();
@@ -765,21 +765,22 @@ void map_toggle_menu_button(gboolean enable)
 	gtk_widget_set_sensitive(menu_button, enable);
 }
 
-static void map_drag_mouse_clicked(point_t point, guint time)
+static void mouse_pressed(point_t point, guint time)
 {
-	map_mouse_clicked_point = point;
-	map_mouse_clicked_time = time;
+	clicked_point = point;
+	clicked_time = time;
 }
 
 static inline void draw_cross()
 {
-	if(rightclick_point.x == -1)
+	if (clicked_point.x == -1)
 		return;
 	const int r = 15;
+
 	gdk_draw_line(drawingarea->window, g_context.crosssign_gc,
-		rightclick_point.x - r, rightclick_point.y, rightclick_point.x + r, rightclick_point.y);
+		clicked_point.x - r, clicked_point.y, clicked_point.x + r, clicked_point.y);
 	gdk_draw_line(drawingarea->window, g_context.crosssign_gc,
-		rightclick_point.x, rightclick_point.y - r, rightclick_point.x, rightclick_point.y + r);
+		clicked_point.x, clicked_point.y - r, clicked_point.x, clicked_point.y + r);
 }
 
 static inline void show_lat_lon(point_t point)
@@ -797,7 +798,7 @@ static inline void show_lat_lon(point_t point)
 static inline void map_right_clicked(point_t point)
 {
 	draw_cross();
-	rightclick_point = point;
+	clicked_point = point;
 	draw_cross();
 
 	show_lat_lon(point);
@@ -807,46 +808,46 @@ static inline void map_right_clicked(point_t point)
  * Thus we can detect this as "right click" event and show location data.
  * Draw to drawing area is a bad idea -- if we don't freeze the view,
  * data get overlap with each other... and we have to invalidate drawing area. */
-static void map_drag_mouse_motion(point_t point, guint time)
+static void mouse_motion(point_t point, guint time)
 {
 	if (rightclicked) {
 		map_right_clicked(point);
 		return;
 	}
 
-	int offset_x = point.x - map_mouse_clicked_point.x;
-	int offset_y = point.y - map_mouse_clicked_point.y;
+	int offset_x = point.x - clicked_point.x;
+	int offset_y = point.y - clicked_point.y;
 	int dist = sqrt(offset_x * offset_x + offset_y * offset_y);
 
-	if (dist < 10 && (time - map_mouse_clicked_time >= 2000)) {
+	if (dist < 10 && (time - clicked_time >= 2000)) {
 		g_context.map_view_frozen = TRUE;
 		map_right_clicked(point);
 		rightclicked = TRUE;
 	}
 }
 
-static void map_drag_mouse_released(point_t point, guint time)
+static void mouse_released(point_t point, guint time)
 {
 	if (rightclicked) {
 		g_context.map_view_frozen = FALSE;
 		rightclicked = FALSE;
 		draw_cross();
 		show_lat_lon(point);
-		rightclick_point.x = rightclick_point.y = -1;
+		clicked_point.x = clicked_point.y = -1;
 		return;
 	}
 
-	if (map_mouse_clicked_point.x == -1)
+	if (clicked_point.x == -1)
 		return;
 
-	point.x -= map_mouse_clicked_point.x;
-	point.y -= map_mouse_clicked_point.y;
+	point.x -= clicked_point.x;
+	point.y -= clicked_point.y;
 	int dist = sqrt(point.x * point.x + point.y * point.y);
 
-	if (dist <= 50)
-		return;
+	clicked_point.x = clicked_point.y = -1;
 
-	map_mouse_clicked_point.x = map_mouse_clicked_point.y = -1;
+	if (dist <= 30)
+		return;
 
 	/* When pan to map edge, avoid displaying blank map */
 	int center_x = g_view.fglayer.center_pixel.x - point.x;
@@ -871,18 +872,19 @@ static void map_drag_mouse_released(point_t point, guint time)
 	g_view.center_wgs84 = tilepixel_to_wgs84(g_view.fglayer.center_pixel,
 		g_view.fglayer.repo->zoom, g_view.fglayer.repo);
 
-	g_context.location_inview = FALSE;
+	g_context.cursor_in_view = FALSE;
+	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Black], TRUE);
 
 	map_invalidate_view(TRUE);
 }
 
 static void setup_drawingarea_mouse_handlers()
 {
-	mouse_dragmap_handler.press_handler = map_drag_mouse_clicked;
-	mouse_dragmap_handler.release_handler = map_drag_mouse_released;
-	mouse_dragmap_handler.motion_handler = map_drag_mouse_motion;
+	mouse_handler.press_handler = mouse_pressed;
+	mouse_handler.release_handler = mouse_released;
+	mouse_handler.motion_handler = mouse_motion;
 
-	drawingarea_set_default_mouse_handler(&mouse_dragmap_handler);
+	drawingarea_set_default_mouse_handler(&mouse_handler);
 }
 
 /**
@@ -985,6 +987,7 @@ GtkWidget * view_tab_create()
 	gtk_container_add (GTK_CONTAINER (topbox), center_button);
 	g_signal_connect (G_OBJECT (center_button), "clicked",
 		G_CALLBACK (center_button_clicked), NULL);
+	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Gray], TRUE);
 
 	fullscreen_button = gtk_button_new_with_label("Full");
 	gtk_button_set_relief(GTK_BUTTON(fullscreen_button), GTK_RELIEF_HALF);

@@ -68,3 +68,18 @@ gboolean confirm_dialog(char *msg)
 	gtk_widget_destroy(dialog);
 	return (ret == GTK_RESPONSE_OK);
 }
+
+void modify_button_color(GtkButton *button, GdkColor *color, gboolean is_fg)
+{
+	int i;
+
+	GtkWidget *child = NULL;
+	if (is_fg)
+		child = gtk_bin_get_child(GTK_BIN(button));
+	for (i=GTK_STATE_NORMAL; i<=GTK_STATE_INSENSITIVE; i++) {
+		if (is_fg)
+			gtk_widget_modify_fg(child, i, color);
+		else
+			gtk_widget_modify_bg(GTK_WIDGET(button), i, color);
+	}
+}

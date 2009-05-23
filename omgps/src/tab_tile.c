@@ -291,21 +291,19 @@ static void maplist_treeview_row_selected (GtkTreeView *tree_view, gpointer user
 static void create_maplist_treeview()
 {
 	maplist_treeview = gtk_tree_view_new ();
-
-	maplist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_container_add (GTK_CONTAINER (maplist_treeview_sw), maplist_treeview);
+	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (maplist_treeview), TRUE);
+	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (maplist_treeview), FALSE);
 
 	GtkTreeSelection *sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(maplist_treeview));
 	gtk_tree_selection_set_mode (sel, GTK_SELECTION_SINGLE);
 	g_signal_connect (G_OBJECT(maplist_treeview), "cursor-changed",
 		G_CALLBACK (maplist_treeview_row_selected), NULL);
 
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (maplist_treeview_sw), GTK_SHADOW_ETCHED_IN);
+	maplist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (maplist_treeview_sw), GTK_SHADOW_NONE);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (maplist_treeview_sw),
 			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (maplist_treeview), TRUE);
-	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (maplist_treeview), FALSE);
+	gtk_container_add (GTK_CONTAINER (maplist_treeview_sw), maplist_treeview);
 
 	/* add columns to the tree view */
 	GtkCellRenderer *cell;

@@ -4,17 +4,17 @@
 #include "track.h"
 
 #define NAV_DA_H_OFF	0
-#define NAV_DA_SPD_OFF	6
-#define NAV_DA_SV_OFF	14
+#define NAV_DA_SPD_OFF	7
+#define NAV_DA_SV_OFF	15
 
 #define NUM_NAV_DA		3
 #define FONT_IMG_WIDTH	18
 #define FONT_IMG_HEIGHT	36
 
 static GtkWidget *nav_da;
-#define nav_da_fonts 	18
-static char nav_text[nav_da_fonts + 1];
-static char last_nav_text[nav_da_fonts + 1];
+#define NAV_DA_FONT_NUM 	20
+static char nav_text[NAV_DA_FONT_NUM + 1];
+static char last_nav_text[NAV_DA_FONT_NUM + 1];
 
 #define HEADING_AREA_WIDTH	40
 #define HEADING_AREA_HEIGHT	40
@@ -232,7 +232,7 @@ static void draw_labels(gboolean force_redraw)
 	int i, offset = 0;
 	XPM_ID_T id;
 
-	for (i=0; i<nav_da_fonts; i++) {
+	for (i=0; i<NAV_DA_FONT_NUM; i++) {
 		offset += FONT_IMG_WIDTH;
 
 		if (! force_redraw && nav_text[i] == last_nav_text[i])
@@ -306,7 +306,7 @@ void poll_update_ui()
 		offset_sensitive = update_position_offset();
 	}
 
-	memset(nav_text, 0, nav_da_fonts);
+	memset(nav_text, 0, NAV_DA_FONT_NUM);
 
 	if (g_gpsdata.height_valid)
 		sprintf(&nav_text[NAV_DA_H_OFF], "%dm", (int)g_gpsdata.height);
@@ -394,14 +394,14 @@ void ctx_gpsfix_on_poll_engine_changed()
 
 GtkWidget * ctx_tab_gps_fix_create()
 {
-	memset(last_nav_text, 0, nav_da_fonts);
+	memset(last_nav_text, 0, NAV_DA_FONT_NUM);
 
 	GtkWidget *hbox = gtk_hbox_new(FALSE, 0);
 
 	GtkWidget *nav_hbox = gtk_hbox_new(TRUE, 0);
 
 	nav_da = gtk_drawing_area_new();
-	gtk_widget_set_size_request(nav_da, FONT_IMG_WIDTH * nav_da_fonts, FONT_IMG_HEIGHT);
+	gtk_widget_set_size_request(nav_da, FONT_IMG_WIDTH * NAV_DA_FONT_NUM, FONT_IMG_HEIGHT);
 	gtk_container_add(GTK_CONTAINER(nav_hbox), nav_da);
 	g_signal_connect (nav_da, "expose-event", G_CALLBACK(nav_da_expose_event), NULL);
 
@@ -412,11 +412,14 @@ GtkWidget * ctx_tab_gps_fix_create()
 	gtk_box_pack_start(GTK_BOX (hbox), heading_da, FALSE, FALSE, 0);
 	g_signal_connect (heading_da, "expose-event", G_CALLBACK(heading_da_expose_event), NULL);
 
-	poll_engine_image = gtk_image_new_from_pixbuf(g_xpm_images[XPM_ID_POLLENGINE_UBX].pixbuf);
-	gtk_box_pack_start(GTK_BOX (hbox), poll_engine_image, FALSE, FALSE, 0);
+	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX (hbox), vbox, FALSE, FALSE, 0);
 
 	track_image = gtk_image_new_from_pixbuf(g_xpm_images[XPM_ID_TRACK_OFF].pixbuf);
-	gtk_box_pack_start(GTK_BOX (hbox), track_image, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX (vbox), track_image, FALSE, FALSE, 0);
+
+	poll_engine_image = gtk_image_new_from_pixbuf(g_xpm_images[XPM_ID_POLLENGINE_UBX].pixbuf);
+	gtk_box_pack_end(GTK_BOX (vbox), poll_engine_image, FALSE, FALSE, 0);
 
 	return hbox;
 }

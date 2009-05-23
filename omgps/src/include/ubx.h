@@ -9,13 +9,10 @@
 
 #define UBX_CLASS_NAV 		0x01
 #define UBX_CLASS_RXM 		0x02
-#define UBX_CLASS_INF 		0x04
 #define UBX_CLASS_ACK		0x05
 #define UBX_CLASS_CFG 		0x06
-#define UBX_CLASS_UPD 		0x09
 #define UBX_CLASS_MON 		0x0A
 #define UBX_CLASS_AID 		0x0B
-#define UBX_CLASS_TIM 		0x0D
 
 #define UBX_ID_NAV_POSLLH	0x02
 #define UBX_ID_NAV_STATUS	0x03
@@ -28,26 +25,17 @@
 
 #define UBX_ID_CFG_PRT		0x00
 #define UBX_ID_CFG_MSG		0x01
-#define UBX_ID_CFG_INF		0x02
 #define UBX_ID_CFG_RST		0x04
-#define UBX_ID_CFG_TP		0x07
 #define UBX_ID_CFG_RATE		0x08
 #define UBX_ID_CFG_SBAS		0x16
-#define UBX_ID_CFG_NAV2		0x1A
+#define UBX_ID_CFG_RXM		0x11
 
-#define UBX_ID_AID_REQ		0x00
-#define UBX_ID_AID_DATA		0x10
 #define UBX_ID_AID_INI		0x01
 #define UBX_ID_AID_HUI		0x02
 #define UBX_ID_AID_ALM		0x30
 #define UBX_ID_AID_EPH		0x31
 
-#define UBX_ID_MON_SCHD		0x01
-#define UBX_ID_MON_VER		0X04
-#define UBX_ID_MON_MSGPP	0X06
-
-#define UBX_ID_INF_ERROR	0x00
-#define UBX_ID_INF_WARNING	0X01
+#define UBX_ID_MON_VER		0x04
 
 typedef struct __ubx_msg_type_t
 {
@@ -75,7 +63,8 @@ extern gboolean ubx_cfg_prt(U1 port_id, U1 in_protocol, U1 out_protocol, U4 baud
 extern gboolean ubx_cfg_rate(U2 update_rate, gboolean readack);
 extern gboolean ubx_cfg_msg_nmea_ubx(U1 send_rate, gboolean all, gboolean readack);
 extern gboolean ubx_cfg_msg_nmea_std(U1 send_rate, gboolean all, gboolean readack);
-extern gboolean ubx_cfg_msg(const ubx_msg_type_t *type, gboolean enabled);
+extern gboolean ubx_cfg_msg(const ubx_msg_type_t *type, gboolean enabled, gboolean readack);
+extern gboolean ubx_cfg_rxm(U1 mode, gboolean readack);
 extern gboolean ubx_cfg_sbas(gboolean enable, gboolean readack);
 extern gboolean ubx_cfg_rst(U2 bbr, U1 reset_type);
 //extern gboolean ubx_cfg_nav2(U1 maxsv, gboolean allow_alma_nav, gboolean readack);

@@ -15,11 +15,11 @@ static const ubx_msg_type_t type_nav_timeutc = 	{UBX_CLASS_NAV, UBX_ID_NAV_TIMEU
 static const ubx_msg_type_t type_nav_svinfo = 	{UBX_CLASS_NAV, UBX_ID_NAV_SVINFO};
 
 static const ubx_msg_type_t type_cfg_prt = 		{UBX_CLASS_CFG, UBX_ID_CFG_PRT};
-static const ubx_msg_type_t type_cfg_inf = 		{UBX_CLASS_CFG, UBX_ID_CFG_INF};
 static const ubx_msg_type_t type_cfg_msg = 		{UBX_CLASS_CFG, UBX_ID_CFG_MSG};
 static const ubx_msg_type_t type_cfg_rate = 	{UBX_CLASS_CFG, UBX_ID_CFG_RATE};
 static const ubx_msg_type_t type_cfg_sbas = 	{UBX_CLASS_CFG, UBX_ID_CFG_SBAS};
 static const ubx_msg_type_t type_cfg_rst = 		{UBX_CLASS_CFG, UBX_ID_CFG_RST};
+static const ubx_msg_type_t type_cfg_rxm = 		{UBX_CLASS_CFG, UBX_ID_CFG_RXM};
 
 static const ubx_msg_type_t type_mon_ver = 		{UBX_CLASS_MON, UBX_ID_MON_VER};
 
@@ -30,8 +30,7 @@ gboolean ubx_send_request(U1 *buf, int size)
 {
 	int written = 0;
 	while (TRUE) {
-		written = write_check_gps_power(buf, size);
-		if (written < 0)
+		if ((written = write(gps_dev_fd, &buf[written], size)) <= 0)
 			return FALSE;
 		size -= written;
 		if (size == 0)
@@ -68,8 +67,7 @@ static gboolean ubx_read_header(U1 *buf, int next_len)
 	int ret;
 
 	while (1) {
-		ret = read_check_gps_power(&c, 1);
-		if (ret != 1) {
+		if ((ret = read(gps_dev_fd, &c, 1)) != 1) {
 			usart_flush_output();
 			return FALSE;
 		}
@@ -82,7 +80,6 @@ static gboolean ubx_read_header(U1 *buf, int next_len)
 			else {
 				log_warn("read UBX binary header failed, bad stream: "
 					"expect 0x62 after 0xB5, but get %x. continue", c);
-				//return FALSE;
 				continue;
 			}
 		}
@@ -175,7 +172,8 @@ gboolean ubx_issue_cmd(U1 *packet, int len)
  * Enable or disable all standard NMEA messages
  * send_reate: 0x00 means disabled.
  *
- * NOTE: on FR GTA02 v6, the I/O target # is 1. (0, 1, 2, 3)
+ * NOTE: on FR GTA02 v6, the I/O target numbers are 1. (0, 1, 2, 3)
+ * Although u-blox firmware 5.00 6 document says 6 ports, but ANTARIS 0635 has only 4.
  */
 gboolean ubx_cfg_msg_nmea_std(U1 send_rate, gboolean all, gboolean readack)
 {
@@ -202,14 +200,7 @@ gboolean ubx_cfg_msg_nmea_std(U1 send_rate, gboolean all, gboolean readack)
 		packet[off+5] = 0;	/*target 3*/
 	}
 
-	if (! ubx_issue_cmd(packet, sizeof(packet)))
-		return FALSE;
-
-	if (readack) {
-		if(! ubx_read_ack(&type_cfg_msg))
-			return FALSE;
-	}
-	return TRUE;
+	return ubx_issue_cmd(packet, sizeof(packet)) && (! readack || ubx_read_ack(&type_cfg_msg));
 }
 
 void ubx_mon_ver_poll(char *buf, int buf_len)
@@ -229,14 +220,9 @@ void ubx_mon_ver_poll(char *buf, int buf_len)
 		return;
 	}
 
-	int size = snprintf(buf, buf_len, "\n\tsoftware=%s\n"
-			"\thardware=%s",
-			msg.payload_addr, &msg.payload_addr[30]);
+	snprintf(buf, buf_len, "software=%s; hardware=%s", msg.payload_addr, &msg.payload_addr[30]);
 
-	int i, n = (msg.payload_len - 40) / 30;
-	for (i=0; i<n; i++) {
-		size += snprintf(&buf[size], buf_len - size, "\n\textension #%d=%s", i, &msg.payload_addr[40+i*30]);
-	}
+	/* no extension at all, ignore */
 }
 
 /**
@@ -267,16 +253,10 @@ gboolean ubx_cfg_msg_nmea_ubx(U1 send_rate, gboolean all, gboolean readack)
 		packet[off+5] = 0;	/*target 3*/
 	}
 
-	if(! ubx_issue_cmd(packet, sizeof(packet)))
-		return FALSE;
-	if (readack) {
-		if(! ubx_read_ack(&type_cfg_msg))
-			return FALSE;
-	}
-	return TRUE;
+	return ubx_issue_cmd(packet, sizeof(packet)) && (! readack || ubx_read_ack(&type_cfg_msg));
 }
 
-gboolean ubx_cfg_msg(const ubx_msg_type_t *msg_type, gboolean enabled)
+gboolean ubx_cfg_msg(const ubx_msg_type_t *msg_type, gboolean enabled, gboolean readack)
 {
 	U1 packet[11] = {
 		0xB5, 0x62,
@@ -288,8 +268,7 @@ gboolean ubx_cfg_msg(const ubx_msg_type_t *msg_type, gboolean enabled)
 	packet[7] = msg_type->id;
 	packet[8] = enabled? 0x01 : 0x00;
 
-	return ubx_issue_cmd(packet, sizeof(packet)) &&
-		ubx_read_ack(&type_cfg_msg);
+	return ubx_issue_cmd(packet, sizeof(packet)) && (! readack || ubx_read_ack(&type_cfg_msg));
 }
 
 /**
@@ -310,13 +289,7 @@ gboolean ubx_cfg_rate(U2 meas, gboolean readack)
 	packet[6] = (U1)(meas & 0xFF);
 	packet[7] = (U1)((meas >> 8) & 0xFF);
 
-	if (!ubx_issue_cmd(packet, sizeof(packet)))
-		return FALSE;
-
-	if (readack && ! ubx_read_ack(&type_cfg_rate))
-		return FALSE;
-
-	return TRUE;
+	return ubx_issue_cmd(packet, sizeof(packet)) && (!readack || ubx_read_ack(&type_cfg_rate));
 }
 
 /**
@@ -343,38 +316,45 @@ gboolean ubx_cfg_sbas(gboolean enable, gboolean readack)
 		0X00, 0X00 /* checksum */
 	};
 
-	if(! ubx_issue_cmd(packet, sizeof(packet)))
-		return FALSE;
-	if (readack) {
-		if(! ubx_read_ack(&type_cfg_sbas))
-			return FALSE;
-	}
-	return TRUE;
+	return ubx_issue_cmd(packet, sizeof(packet)) && (! readack || ubx_read_ack(&type_cfg_sbas));
 }
 
 /**
- *  BBR Sections to clear:
+ * Firmware 5.00.
+ * 	0: Max performance mode
+ * 	4: Eco mode
+ */
+gboolean ubx_cfg_rxm(U1 lp_mode, gboolean readack)
+{
+	U1 packet[] = {
+		0xB5, 0x62,
+		type_cfg_rxm.class, type_cfg_rxm.id,
+		0x02, 0x00,
+		0, lp_mode,
+		0x00, 0x00
+	};
+
+	return ubx_issue_cmd(packet, sizeof(packet)) && (! readack || ubx_read_ack(&type_cfg_rxm));
+}
+
+/**
+ * Firmware 5.00.
+ * BBR Sections to clear:
  *
- *  0x0001 Ephemeris
- *  0x0002 Almanach
- *  0x0004 Health
- *  0x0008 Klobuchard
- *  0x0010 Position
- *  0x0020 Clock Drift
- *  0x0040 Oscilator Parameter
- *  0x0080 UTC Correction Parameters
- *  0x0100 RTC
- *  0x0000 Hotstart
- *  0x0001 Warmstart
- *  0xFFFF Coldstart
+ * 0x0000 Hotstart
+ * 0x0001 Warmstart
+ * 0xFFFF Coldstart
  *
- *  Reset Type:
- *
- *  0x00 - Hardware Reset (Watchdog)
- *  0x01 - Controlled Software reset
- *  0x02 - Controlled Software reset (GPS only)
- *  0x08 - Controlled GPS stop
- *  0x09 - Controlled GPS start
+ * Reset Type:
+ * 0x00 - Hardware Reset (Watchdog)
+ * 0x01 - Controlled Software reset
+      terminates all running processes in an orderly manner and, once the system is
+ *    idle, restarts operation, reloads its configuration and starts to acquire and track GPS satellites
+ * 0x02 - Controlled Software reset (GPS only)
+ *    only restarts the GPS tasks, without reinitializing the full system or
+ *    reloading any stored configuration.
+ * 0x08 - Controlled GPS stop
+ * 0x09 - Controlled GPS start
  */
 gboolean ubx_cfg_rst(U2 bbr, U1 reset_type)
 {
@@ -404,12 +384,7 @@ gboolean ubx_reset_gps(char *type)
 	else
 		return FALSE; // should not happen
 
-	if (ubx_cfg_rst(bbr, 0x01)) {
-		sleep(1);
-		return TRUE;
-	} else {
-		return FALSE;
-	}
+	return ubx_cfg_rst(bbr, 0x02);
 }
 
 /**
@@ -446,11 +421,7 @@ gboolean ubx_cfg_prt(U1 port_id, U1 in_protocol, U1 out_protocol, U4 baud, gbool
 	packet[6+12] = in_protocol;
 	packet[6+14] = out_protocol;
 
-	if (! ubx_issue_cmd(packet, sizeof(packet)))
-		return FALSE;
-	if(readack)
-		return ubx_read_ack(&type_cfg_prt);
-	return TRUE;
+	return ubx_issue_cmd(packet, sizeof(packet)) && (! readack|| ubx_read_ack(&type_cfg_prt));
 }
 
 static gboolean ubx_parse_nav_svinfo(ubx_msg_t *msg)
@@ -468,38 +439,40 @@ static gboolean ubx_parse_nav_svinfo(ubx_msg_t *msg)
 	}
 
 	int i, j= 0;
-	U1 flags, sv_id, cno, *p;
+	U1 flags, sv_id, *p;
 	svinfo_channel_t *sv;
-
-	memset(g_gpsdata.sv_channels, 0, sizeof(g_gpsdata.sv_channels));
-	memset(g_gpsdata.sv_states, 0, sizeof(g_gpsdata.sv_states));
 
 	g_gpsdata.sv_in_use = 0;
 	g_gpsdata.sv_get_signal = 0;
 
+	/* default elevation is -9, default azimuth is 0 */
+
 	for (i=0; i < g_gpsdata.sv_channel_count; i++) {
 		p = (U1 *)(buf + 8 + i * 12);
-		sv_id = READ_U1(p+1);
-		flags = READ_U1(p+2);
-		cno = READ_U1(p+4);
-
-		g_gpsdata.sv_states[i] = (sv_id << 16) | (flags << 8) | cno;
-
-		if (flags & 0x10) {
-			//log_debug("SV unhealthy: id=%d", sv_id);
-			continue;
-		}
 
 		/* CHN: 255 -- SVs not assigned to a channel */
-		if (READ_U1(p) == 0xFF || READ_U1(p) == 0x00) {
-			//log_debug("SV channel not assigned: id=%d", sv_id);
+		if (READ_U1(p) == 0xFF)
 			continue;
-		}
+
+		/* Valid SV ID: 1..32, or DGPS IDS (>100) */
+		sv_id = READ_U1(p+1);
+		if (sv_id == 0x0)
+			continue;
+
+		flags = READ_U1(p+2);
+		/* unhealthy */
+		if (flags & 0x10)
+			continue;
 
 		sv = &g_gpsdata.sv_channels[j];
 		sv->sv_id = sv_id;
 		sv->flags = flags;
-		sv->cno = cno;
+		sv->cno = READ_U1(p+4);
+		sv->elevation = READ_S1(p+5);
+		sv->azimuth = READ_S2(p+6);
+		if (sv->elevation < 0 || sv->azimuth < 0)
+			sv->elevation = sv->azimuth = -9;
+
 		if ((flags & 0x01) == 0x01)
 			++g_gpsdata.sv_in_use;
 
@@ -515,7 +488,7 @@ static gboolean ubx_parse_nav_svinfo(ubx_msg_t *msg)
 }
 
 /**
- * For dump AID-EPH, AID-ALM.
+ * For dump AID-EPH, AID-HUI, AID-ALM.
  * Make sure the <raw> char array can holds max length of data ot <type>
  *
  * From http://www.u-blox.cn/customersupport/gps.g5/ublox5_Fw5.00_Release_Notes(GPS.G5-SW-08019).pdf:
@@ -613,10 +586,10 @@ static inline gboolean ubx_parse_nav_status(ubx_msg_t *msg)
 
 	g_gpsdata.nav_status_itow = (U4)READ_U4(buf);
 	g_gpsdata.nav_status_fixtype = (U1)READ_U1(buf+4);
-	g_gpsdata.nav_status_flags = ((U1)READ_U1(buf+5)) & 0xF;
-	g_gpsdata.nav_status_diffs = ((U1)READ_U1(buf+6)) & 0x4;
-	g_gpsdata.nav_status_ttff = (U4)READ_U4(buf+8);
-	g_gpsdata.nav_status_msss = (U4)READ_U4(buf+12);
+	//g_gpsdata.nav_status_flags = ((U1)READ_U1(buf+5)) & 0xF;
+	//g_gpsdata.nav_status_diffs = ((U1)READ_U1(buf+6)) & 0x4;
+	//g_gpsdata.nav_status_ttff = (U4)READ_U4(buf+8);
+	//g_gpsdata.nav_status_msss = (U4)READ_U4(buf+12);
 
 	return TRUE;
 }
@@ -713,9 +686,8 @@ static gboolean ubx_parse_nav_timeutc(ubx_msg_t *msg)
 
 	g_gpsdata.time_valid = TRUE;
 
-	if (! g_context.time_synced) {
+	if (! g_context.time_synced)
 		sync_gpstime_to_system(&g_gpsdata.time);
-	}
 
 	return TRUE;
 }
@@ -768,15 +740,14 @@ gboolean ubx_poll_group(gboolean pollsv)
 	int written = 0;
 
 	for (; size > 0; size-= written) {
-		written = write_check_gps_power(&poll_packet[written], size);
-		if (written < 0) {
+		if ((written = write(gps_dev_fd, &poll_packet[written], size)) <= 0) {
 			log_warn("UBX poll: write device failed");
 			return FALSE;
 		}
 	}
 	tcdrain(gps_dev_fd);
 
-	sleep_ms(500);
+	sleep_ms(SEND_RATE);
 
 	gboolean has_failure = FALSE;
 	for (i=0; i<count; i++) {
@@ -788,3 +759,4 @@ gboolean ubx_poll_group(gboolean pollsv)
 
 	return ! has_failure;
 }
+

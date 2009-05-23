@@ -5,6 +5,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <string.h>
 
 #include "omgps.h"
 #include "gps.h"
@@ -18,8 +19,8 @@ static struct termios ttyset, ttyset_old;
 static int gps_dev_fd = -1;
 static int flags;
 static int fd_count;
-static struct timespec timeout;
-static fd_set rs, ws;
+
+#define TIMEOUT ((unsigned char)(20000 / SEND_RATE))
 
 /**
  * NOTE: these file paths are subject to change according to kernel and distribution.
@@ -147,74 +148,28 @@ gboolean gps_device_power_on()
 	return usart_init();
 }
 
-/**
- * select() may update the timeout argument to indicate how much time was left.
- * pselect() does not change this argument.
- */
-inline int read_check_gps_power(U1 *buf, int len)
-{
-	int n;
-RETRY:
-	FD_ZERO(&rs);
-	FD_SET(gps_dev_fd, &rs);
-	n = pselect(fd_count, &rs, NULL, NULL, &timeout, NULL);
-	if (n <= 0) {
-		if (n < 0) {
-			if (errno == EINTR)
-				goto RETRY;
-			else
-				log_error("read serial port failed: %s", strerror(errno));
-		}
-		return -1;
-	}
-
-	if (FD_ISSET(gps_dev_fd, &rs)) {
-		return read(gps_dev_fd, buf, len);
-	} else {
-		return -1;
-	}
-}
-
-inline int write_check_gps_power(U1 *buf, int len)
-{
-	int n;
-RETRY:
-	FD_ZERO(&ws);
-	FD_SET(gps_dev_fd, &ws);
-	n = pselect(fd_count, NULL, &ws, NULL, &timeout, NULL);
-	if (n <= 0) {
-		if (n < 0) {
-			if (errno == EINTR)
-				goto RETRY;
-			else
-				log_error("write serial port failed: %s", strerror(errno));
-		}
-		return -1;
-	}
-
-	if (FD_ISSET(gps_dev_fd, &ws)) {
-		return write(gps_dev_fd, buf, len);
-	} else {
-		return -1;
-	}
-}
-
 /*
  * If the read size < expected length, retry even if EOF
  */
-gboolean read_fixed_len(U1 *buf, int expected_len)
+gboolean inline read_fixed_len(U1 *buf, int expected_len)
 {
 	int len = 0, count;
-	while (len < expected_len) {
-		count = read_check_gps_power(&buf[len], expected_len - len);
+
+	while (TRUE) {
+		count = read(gps_dev_fd, &buf[len], expected_len);
+		if (count == expected_len)
+			return TRUE;
+
 		if (count <= 0) {
 			usart_flush_output();
 			return FALSE;
 		} else {
 			len += count;
+			expected_len -= count;
+			if (expected_len == 0)
+				return TRUE;
 		}
 	}
-	return TRUE;
 }
 
 /**
@@ -279,21 +234,24 @@ int usart_open(unsigned int baud_rate, gboolean verify_output)
 
 	ttyset.c_iflag = ttyset.c_oflag = ttyset.c_lflag = 0;
 	ttyset.c_cflag = CS8 | CLOCAL | CREAD;
+	ttyset.c_lflag &= ~(ICANON | ISIG | ECHO);
 
 	int i;
 	for (i = 0; i < NCCS; i++)
 		ttyset.c_cc[i] = -1;
 
-	ttyset.c_cc[VMIN] = 1;
-	ttyset.c_cc[VTIME] = 0; /* no timeout */
+	ttyset.c_cc[VMIN] = 0;
 
-	if (tcsetattr(gps_dev_fd, TCSANOW, &ttyset) != 0)
+	/* unit: 1/10 second, max: 256
+	 * NOTE: this also means message send rate must <= 25 seconds. */
+	ttyset.c_cc[VTIME] = TIMEOUT;
+
+	if (tcsetattr(gps_dev_fd, TCSANOW, &ttyset) != 0) {
+		log_error("Unable to set USART attribute: %s", strerror(errno));
 		return 0;
+	}
 
 	fd_count = gps_dev_fd + 1;
-
-	timeout.tv_sec = 3; // NOTE
-	timeout.tv_nsec = 0;
 
 	if (verify_output) {
 		/* wait until USART has NMEA data output */
@@ -303,8 +261,10 @@ int usart_open(unsigned int baud_rate, gboolean verify_output)
 
 		/* turn back to blocking mode */
 		flags &= ~O_NONBLOCK;
-		if (fcntl(gps_dev_fd, F_SETFL, flags) != 0)
+		if (fcntl(gps_dev_fd, F_SETFL, flags) != 0) {
+			log_error("Unable to turn USART back to blocking mode: %s", strerror(errno));
 			return FALSE;
+		}
 	}
 
 	return gps_dev_fd;
@@ -327,31 +287,32 @@ gboolean usart_init()
 	log_info("USART init: message rate=%d ms, baud rate=%d...", SEND_RATE, BAUD_RATE);
 	show_status("Initializing GPS...");
 
-	gboolean ret = FALSE;
-
 	/* open USART */
 	if (usart_open((U4)BAUD_RATE, TRUE) <= 0) {
 		log_error("Open USART failed");
-		goto END;
+		return FALSE;
 	}
 
 	ubx_init(gps_dev_fd);
 
-	if (! ubx_cfg_rate((U2)SEND_RATE, FALSE))
-		goto END;
+	if (! ubx_cfg_rate((U2)SEND_RATE, TRUE))
+		return FALSE;
 
-	if (! ubx_cfg_prt(0x01, 0x01, 0x01, BAUD_RATE, FALSE))
-		goto END;
+	if (! ubx_cfg_prt(0x01, 0x01, 0x01, BAUD_RATE, TRUE))
+		return FALSE;
 
 	/* Disable NMEA to avoid flushing UBX binary output */
-	if (! ubx_cfg_msg_nmea_ubx(0x0, TRUE, FALSE))
-		goto END;
+	if (! ubx_cfg_msg_nmea_ubx(0x0, TRUE, TRUE))
+		return FALSE;
 
-	if (! ubx_cfg_msg_nmea_std(0x0, TRUE, FALSE))
-		goto END;
+	if (! ubx_cfg_msg_nmea_std(0x0, TRUE, TRUE))
+		return FALSE;
 
-	if (! ubx_cfg_sbas(g_context.sbas_enable, FALSE))
-		goto END;
+	if (! ubx_cfg_sbas(g_context.sbas_enable, TRUE))
+		return FALSE;
+
+	if (! ubx_cfg_rxm(0x04, TRUE))
+		return FALSE;
 
 	show_status("Set initial AID data...");
 
@@ -360,13 +321,12 @@ gboolean usart_init()
 
 	usart_flush_output();
 
-	ubx_mon_ver_poll(g_ubx_receiver_versions, sizeof(g_ubx_receiver_versions));
-	log_info("GPS version: %s", g_ubx_receiver_versions);
-
 	show_status("GPS was initialized.");
-	ret = TRUE;
-END:
-	return ret;
+
+	ubx_mon_ver_poll(g_ubx_receiver_versions, sizeof(g_ubx_receiver_versions));
+	show_status(g_ubx_receiver_versions);
+
+	return TRUE;
 }
 
 void usart_close()

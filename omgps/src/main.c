@@ -22,10 +22,13 @@ static pthread_mutex_t cleanup_lock = PTHREAD_MUTEX_INITIALIZER;
 static char pid_file[128];
 static int pid_fd = -1;
 
+/* SHR (20090509) set expander-size as 40, too large! */
 static const char *style_string =
 	"style \"scroll\" { GtkScrollbar::slider-width = 25 }\n"
 	"class \"*\" style \"scroll\"\n"
-	"gtk-font-name = \"Sans Bold 14px\"\n";
+	"gtk-font-name = \"Sans Bold 14px\"\n"
+	"style \"treeview\" { GtkTreeView::expander-size = 18 }\n"
+	"class \"*\" style \"treeview\"\n";
 
 /* Help debugging non-GPS related modules on development platform */
 #define PLATFORM_FSO	TRUE
@@ -388,7 +391,7 @@ static void init_g_context_vars()
 
 	/* enable when center button is clicked, disable when after being dragged */
 	g_context.run_gps_on_start = TRUE;
-	g_context.location_inview = TRUE;
+	g_context.cursor_in_view = TRUE;
 	g_context.sbas_enable = TRUE;
 }
 

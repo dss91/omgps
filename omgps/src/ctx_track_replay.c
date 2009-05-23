@@ -267,14 +267,14 @@ static void replay_update_ui_helper(gboolean prepare)
 	static coord_t center_wgs84;
 
 	if (prepare) {
-		g_context.location_inview = TRUE;
+		g_context.cursor_in_view = TRUE;
 		g_context.map_view_frozen = TRUE;
 		zoom = g_view.fglayer.repo->zoom;
 		center_wgs84 = g_view.center_wgs84;
 
 		map_set_redraw_func(&replay_redraw_view);
 	} else {
-		g_context.location_inview = TRUE;
+		g_context.cursor_in_view = TRUE;
 		g_context.map_view_frozen = FALSE;
 
 		map_set_redraw_func(NULL);
@@ -347,7 +347,7 @@ static void replay_update_ui (int from, int to)
 	if (record->inview) {
 		replay_draw_flag(last_point);
 	} else {
-		if (g_context.location_inview) {
+		if (g_context.cursor_in_view) {
 			RESET_LAST_POINT();
 			track_replay_centralize();
 		}

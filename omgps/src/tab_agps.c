@@ -16,7 +16,7 @@
 static GtkWidget *user_entry, *pwd_entry, *pwd_entry_again;
 static GtkWidget *save_account_button, *reset_account_button;
 static GtkWidget *online_button, *reset_button;
-static char *reset_type = "hot";
+static char *reset_type = "warm";
 
 static void online_button_clicked(GtkWidget *widget, gpointer data)
 {
@@ -112,6 +112,7 @@ static gboolean reset_gps_cmd(void *_reset_type)
 	}
 
 	gboolean ok = ubx_reset_gps(reset_type);
+	sleep(1);
 
 	char buf[30];
 	if (is_ubx)
