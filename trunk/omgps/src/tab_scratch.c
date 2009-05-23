@@ -185,20 +185,14 @@ static void render_color_buttons()
 		color = &g_base_colors[i];
 		button = color_buttons[i];
 		gtk_widget_show(button);
-		gtk_widget_modify_bg(button, GTK_STATE_NORMAL, color);
-		gtk_widget_modify_bg(button, GTK_STATE_ACTIVE, color);
-		gtk_widget_modify_bg(button, GTK_STATE_SELECTED, color);
-		gtk_widget_modify_bg(button, GTK_STATE_PRELIGHT, color);
+		modify_button_color(GTK_BUTTON(button), color, FALSE);
 
 		/* Help recognize colored buttons when selected/active */
 		color = (i==ID_COLOR_Aqua || i==ID_COLOR_Silver||i==ID_COLOR_Lime ||
 				i==ID_COLOR_White || i==ID_COLOR_Yellow)?
 				&g_base_colors[ID_COLOR_Black] : &g_base_colors[ID_COLOR_White];
 
-		gtk_widget_modify_fg(button, GTK_STATE_NORMAL, color);
-		gtk_widget_modify_fg(button, GTK_STATE_ACTIVE, color);
-		gtk_widget_modify_fg(button, GTK_STATE_SELECTED, color);
-		gtk_widget_modify_fg(button, GTK_STATE_PRELIGHT, color);
+		modify_button_color(GTK_BUTTON(button), color, TRUE);
 	}
 
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(color_buttons[ID_COLOR_Black]), TRUE);
@@ -377,7 +371,8 @@ GtkWidget * scratch_tab_create()
 	/* file list treeview */
 
 	filelist_treeview = gtk_tree_view_new ();
-	filelist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (filelist_treeview), TRUE);
+	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (filelist_treeview), FALSE);
 
 	GtkTreeSelection *sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(filelist_treeview));
 	gtk_tree_selection_set_mode (sel, GTK_SELECTION_SINGLE);
@@ -385,12 +380,11 @@ GtkWidget * scratch_tab_create()
 	g_signal_connect (G_OBJECT(filelist_treeview), "cursor-changed",
 		G_CALLBACK (filelist_treeview_row_selected), NULL);
 
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (filelist_treeview_sw), GTK_SHADOW_ETCHED_IN);
+	filelist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (filelist_treeview_sw), GTK_SHADOW_NONE);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (filelist_treeview_sw),
 		GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
-	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (filelist_treeview), TRUE);
-	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (filelist_treeview), FALSE);
 	gtk_container_add (GTK_CONTAINER (filelist_treeview_sw), filelist_treeview);
 
 	/* add columns to the tree view */

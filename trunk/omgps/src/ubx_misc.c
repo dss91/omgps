@@ -12,7 +12,6 @@
 /* FixNow mode, off/reacq-off time */
 #define FXN_OFF_SECONDS				60
 
-static const ubx_msg_type_t type_cfg_rxm = 		{UBX_CLASS_CFG, UBX_ID_CFG_RXM};
 static const ubx_msg_type_t type_cfg_fxn = 		{UBX_CLASS_CFG, UBX_ID_CFG_FXN};
 
 static const ubx_msg_type_t type_mon_schd = 	{UBX_CLASS_MON, UBX_ID_MON_SCHD};
@@ -41,36 +40,6 @@ inline void wakeup_fxn_mode()
 		log_debug("wakeup sleep mode failed...");
 	tcdrain(gps_dev_fd);
 	sleep(1);
-}
-
-
-/**
- * GPS Sensitivity Mode:
- * 	0: Normal
- * 	1: Fast Acquisition
- * 	2: High Sensitivity
- * 	3: Auto
- * Low Power Mode
- * 	0: Continuous Tracking Mode
- * 	1: Fix Now -- UBLOX 5 does not has this
- *
- * see also: CFG-FXN
- */
-gboolean ubx_cfg_rxm(U1 gps_mode, U1 lp_mode, gboolean readack)
-{
-	U1 packet[] = {
-		0xB5, 0x62,
-		type_cfg_rxm.class, type_cfg_rxm.id,
-		0x02, 0x00,
-		gps_mode, lp_mode,
-		0x00, 0x00
-	};
-
-	if (! ubx_issue_cmd(packet, sizeof(packet)))
-		return FALSE;
-	if (readack)
-		return ubx_read_ack(&type_cfg_rxm);
-	return TRUE;
 }
 
 /**

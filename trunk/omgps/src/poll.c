@@ -267,7 +267,7 @@ UBX:
 	update_ui_on_poll_state_changed();
 	UNLOCK_UI();
 
-	g_context.location_inview = TRUE;
+	g_context.cursor_in_view = TRUE;
 }
 
 /**
@@ -330,8 +330,6 @@ static void poll_by_fso_ogpsd()
 		g_gpsdata.sv_in_use = gdo.sv_in_use;
 		g_gpsdata.sv_get_signal = gdo.sv_get_signal;
 		g_gpsdata.sv_channel_count = gdo.sv_channel_count;
-
-		memcpy(g_gpsdata.sv_states, gdo.sv_states, sizeof(gdo.sv_states));
 		memcpy(g_gpsdata.sv_channels, gdo.sv_channels, sizeof(gdo.sv_channels));
 	}
 
@@ -498,7 +496,7 @@ void stop_poll_thread()
 			fso_gypsy_cleanup();
 		} else {
 			if (g_gpsdata.sv_in_use >= 3) {
-				PangoLayout *layout = gtk_widget_create_pango_layout (g_view.da, "Dumping AID data...");
+				PangoLayout *layout = gtk_widget_create_pango_layout (g_window, "Dumping AID data...");
 				PangoFontDescription *desc = pango_font_description_from_string ("Sans Bold 20px");
 				pango_layout_set_font_description (layout, desc);
 
@@ -506,7 +504,7 @@ void stop_poll_thread()
 				pango_layout_get_size (layout, &text_width, &text_height);
 			    text_width /= PANGO_SCALE;
 
-				gdk_draw_layout(g_view.da->window, g_view.da->style->black_gc,
+				gdk_draw_layout(g_window->window, g_view.da->style->black_gc,
 					(g_view.width - text_width) >> 1, g_view.height >> 1, layout);
 
 				pango_font_description_free (desc);
@@ -515,7 +513,7 @@ void stop_poll_thread()
 				/* Aha!*/
 				gdk_flush();
 
-				agps_dump_aid_data(TRUE);
+				agps_dump_aid_data(FALSE);
 			}
 			usart_cleanup();
 		}

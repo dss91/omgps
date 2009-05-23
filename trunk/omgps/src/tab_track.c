@@ -109,7 +109,7 @@ int track_saveall(gboolean _free)
 			TRACK_HEAD_LABEL_3"%-10u\n", (U4)tracks->starttime, 0u, 0u);
 	}
 
-	int i, count = _free? tracks->count : tracks->count / 2;
+	int i, count = _free? tracks->count : tracks->count / 3;
 	for (i=0; i<count; i++) {
 		fprintf(fp, "%lf\t%lf\t%d\n", tracks->tps[i].wgs84.lat,
 			tracks->tps[i].wgs84.lon, tracks->tps[i].time_offset);
@@ -135,8 +135,6 @@ int track_saveall(gboolean _free)
 		free(track_file_path);
 		track_file_path = NULL;
 	}
-
-	//log_info("%d track records was saved to file: %s", count, track_file_path);
 
 	UNLOCK_MUTEX(&save_lock);
 
@@ -618,7 +616,8 @@ static GtkWidget * create_replay_pane()
 	/* file list treeview */
 
 	filelist_treeview = gtk_tree_view_new ();
-	filelist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (filelist_treeview), TRUE);
+	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (filelist_treeview), FALSE);
 
 	GtkTreeSelection *sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(filelist_treeview));
 	gtk_tree_selection_set_mode (sel, GTK_SELECTION_SINGLE);
@@ -626,12 +625,11 @@ static GtkWidget * create_replay_pane()
 	g_signal_connect (G_OBJECT(filelist_treeview), "cursor-changed",
 		G_CALLBACK (replay_filelist_treeview_row_selected), NULL);
 
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (filelist_treeview_sw), GTK_SHADOW_ETCHED_IN);
+	filelist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (filelist_treeview_sw), GTK_SHADOW_NONE);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (filelist_treeview_sw),
 			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
-	gtk_tree_view_set_rules_hint (GTK_TREE_VIEW (filelist_treeview), TRUE);
-	gtk_tree_view_set_reorderable(GTK_TREE_VIEW (filelist_treeview), FALSE);
 	gtk_container_add (GTK_CONTAINER (filelist_treeview_sw), filelist_treeview);
 
 	/* add columns to the tree view */

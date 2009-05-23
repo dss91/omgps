@@ -31,14 +31,6 @@ typedef unsigned long long	U8;
 /* default PACC for CFG-AID-INI, kilometers. Hack! */
 #define AID_INI_PACC_KM				300
 
-/* FIXME: configurable */
-#define TRACK_MAX_PACC 				20
-
-/* unit: meter */
-#define TRACK_MAX_DELTA 			2
-
-#define TRACK_MAX_IN_MEM_RECORDS	120
-
 #define AGPS_SERVER					"agps.u-blox.com"
 #define AGPS_PORT					"46434"
 
@@ -75,15 +67,17 @@ typedef struct __svinfo_channel_t
 	U4 sv_id;
 
 	/**
-	 * 0x01 = SV is used for navigation
-	 * 0x02 = Differential correction data is available for this SV
-	 * 0x04 = Orbit information is available for this SV (Ephemeris or Almanach)
-	 * 0x08 = Orbit information is Ephemeris
-	 * 0x10 = SV is unhealthy / shall not be used
+	 * 1 = SV is used for navigation
+	 * 2 = Differential correction data is available for this SV
+	 * 4 = Orbit information is available for this SV (Ephemeris or Almanach)
+	 * 8 = Orbit information is Ephemeris
+	 * 16 = SV is unhealthy / shall not be used
+	 * 32 = Orbit information is Almanac Plus
 	 */
 	U4 flags;
 
 	/**
+	 * Quality indicator.
 	 * 0: This channel is idle
 	 * 1,2: Channel is searching
 	 * 3: Signal detected but unusable
@@ -91,15 +85,18 @@ typedef struct __svinfo_channel_t
 	 * 5,6: Code and Carrier locked
 	 * 7: Code and Carrier locked, receiving 50bps data
 	 */
-	char qi;
+	//char qi;
 
-	/* Carrier to Noise Ratio (Signal Strength), dbHz*/
+	/* Carrier to Noise Ratio (Signal Strength), 0..99, dbHZ*/
 	U4 cno;
 
-	/* GSV only */
-	unsigned short elevation;
+	/* actual value: [0..90], < 0 means invalid.
+	 * char is enough, align to 4-bytes boundary */
+	int elevation;
 
-	unsigned short azimuth;
+	/* actual value: [0..359], < 0 means invalid.
+	 * short is enough, align to 4-bytes boundary */
+	int azimuth;
 
 } svinfo_channel_t;
 
@@ -177,9 +174,6 @@ typedef struct __gps_data_t
 
 	svinfo_channel_t sv_channels[SV_MAX_CHANNELS];
 
-	/* for comparing changes: flags, cno */
-	U4 sv_states[SV_MAX_CHANNELS];
-
 	/** NAV STATUS **/
 
 	U4 nav_status_itow;
@@ -200,56 +194,22 @@ typedef struct __gps_data_t
 	 * 0x04 = WKNSET (is Week Number valid)
 	 * 0x08 = TOWSET (is Time of Week valid)
 	 * 0x?0 = reserved */
-	U1 nav_status_flags;
+	//U1 nav_status_flags;
 
 	/* Bits [1:0] - DGPS Input Status
 	 * 00: none
 	 * 01: PR+PRR Correction
 	 * 10: PR+PRR+CP Correction
 	 * 11: High accuracy PR+PRR+CP Correction */
-	U1 nav_status_diffs;
+	//U1 nav_status_diffs;
 
 	/* Time to first fix (millisecond time tag) */
-	U4 nav_status_ttff;
+	//U4 nav_status_ttff;
 
 	/* Milliseconds since Startup / Reset */
-	U4 nav_status_msss;
+	//U4 nav_status_msss;
 
 } gps_data_t;
-
-
-typedef struct __trackpoint_t
-{
-	int id;
-
-	/* without position fix */
-	coord_t wgs84;
-
-	/* time offset to start time, second.
-	 * This means the minimal GPS fetch interval is limited to 1 second */
-	U4 time_offset;
-
-	/* global */
-	point_t pixel;
-	gboolean inview;
-
-} trackpoint_t;
-
-typedef struct __track_group_t
-{
-	/* include those on-disk */
-	int total_count;
-	char *file;
-
-	time_t starttime; /* System time */
-
-	/* count into track point array */
-	int count;
-	trackpoint_t tps[TRACK_MAX_IN_MEM_RECORDS];
-
-	/* incremental draw index -- global index */
-	int last_drawn_index;
-} track_group_t;
 
 typedef gboolean (*ctrl_cmd_func_t)(void* args);
 
@@ -257,7 +217,7 @@ typedef gboolean (*ctrl_cmd_func_t)(void* args);
 #define POLL_STATE_SET(s) g_context.poll_state = POLL_STATE_##s
 #define POLL_ENGINE_TEST(e) (g_context.poll_engine == POLL_ENGINE_##e)
 
-extern gboolean agps_dump_aid_data(gboolean dump_hui);
+extern gboolean agps_dump_aid_data(gboolean agps_online);
 extern void set_initial_aid_data();
 
 extern void map_redraw_view_gps_running();

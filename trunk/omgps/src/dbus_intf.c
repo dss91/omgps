@@ -169,9 +169,6 @@ static void parse_sv(GPtrArray *satellites)
 
 	gpsdata->svinfo_valid = TRUE;
 
-	memset(gpsdata->sv_channels, 0, sizeof(gpsdata->sv_channels));
-	memset(gpsdata->sv_states, 0, sizeof(gpsdata->sv_states));
-
 	int i, j;
 	GValueArray *val;
 	svinfo_channel_t *sv;
@@ -188,13 +185,11 @@ static void parse_sv(GPtrArray *satellites)
 			sv->flags = 0x01;
 		}
 
-		sv->elevation = g_value_get_uint(g_value_array_get_nth(val, 2));
-		sv->azimuth = g_value_get_uint(g_value_array_get_nth(val, 3));
+		sv->elevation = (int)g_value_get_uint(g_value_array_get_nth(val, 2));
+		sv->azimuth = (int)g_value_get_uint(g_value_array_get_nth(val, 3));
 		sv->cno = g_value_get_uint(g_value_array_get_nth(val, 4));
 		if (sv->cno > 0)
 			++gpsdata->sv_get_signal;
-
-		gpsdata->sv_states[j] = (sv->sv_id << 16) | sv->cno;
 
 		if (++j == SV_MAX_CHANNELS)
 			break;

@@ -9,7 +9,7 @@ desktopdir = $(datadir)/applications
 dist_desktop_DATA = data/$(PACKAGE).desktop
 
 appicondir = $(datadir)/pixmaps/$(PACKAGE)
-dist_appicon_DATA = data/$(PACKAGE).png
+dist_appicon_DATA = data/$(PACKAGE).png data/sky.jpg
 
 ############ source files ###################
 
@@ -29,6 +29,7 @@ common_CFLAGS = -Wall -Werror       \
   -I$(top_srcdir)/src/include  		\
   -I$(python_include)               \
   -DETCCONF_DIR=\"$(confdir)\"		\
+  -DICONDIR=\"$(appicondir)\"       \
   -D_GNU_SOURCE                     \
   @DEPENDENCIES_CFLAGS@
 

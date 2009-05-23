@@ -43,12 +43,13 @@ typedef struct __aid_args_t {
 	char *name;
 	U1 msg_id;
 	int payload_len;
-	int min_interval;
 	int msg_count;
 } aid_args_t;
 
 #define AGPS_ONLINE_BUF_LEN	4096
 #define PREFIX				"AGPS: "
+
+#define MIN_DUMP_INTERVAL_S	600
 
 static GtkWidget *lockview_button, *submit_button;
 
@@ -273,16 +274,17 @@ END:
 		unlink(tmp);
 		return FALSE;
 	} else {
-		log_info("AID-%s: %d SVs valid", args->name, counter);
+		log_info("AID-%s: %d messages", args->name, counter);
 		return (rename(tmp, args->file) == 0);
 	}
 }
 
 /**
- * NOTE: don't attemp to quicken by change send rate to 500 ms or less --
+ * NOTE: don't attempt to quicken by change send rate to 500 ms or less --
  * it's too fast for default 9600 baud rate.
+ * For AGPS online, force dumping EPH and ALM.
  */
-gboolean agps_dump_aid_data(gboolean dump_hui)
+gboolean agps_dump_aid_data(gboolean agps_online)
 {
 	log_info("Dump AID data...");
 
@@ -298,21 +300,22 @@ gboolean agps_dump_aid_data(gboolean dump_hui)
 	gettimeofday(&time, NULL);
 
 	aid_args_t config[] = {
-		{aid_eph_file, "EPH", UBX_ID_AID_EPH, 104, 600, 32},
-		{aid_alm_file, "ALM", UBX_ID_AID_ALM, 40, 24*3600, 32},
-		{aid_hui_file, "HUI", UBX_ID_AID_HUI, 72, 1800, 1} /* must be last */
+		{aid_eph_file, "EPH", UBX_ID_AID_EPH, 104, 32},
+		{aid_alm_file, "ALM", UBX_ID_AID_ALM, 40, 32},
+		{aid_hui_file, "HUI", UBX_ID_AID_HUI, 72, 1} /* must be last */
 	};
 
 	int i;
 	int count = sizeof(config)/sizeof(aid_args_t);
 	int skip_counter = 0;
 
-	if (! dump_hui)
+	/* AGPS online data does not contain HUI */
+	if (agps_online)
 		--count;
 
 	for (i=0; i<count; i++) {
-		if ((stat(config[i].file, &st) != 0) ||
-			(st.st_mtim.tv_sec + config[i].min_interval < time.tv_sec)) {
+		if (agps_online || (stat(config[i].file, &st) != 0) ||
+			(st.st_mtim.tv_sec + MIN_DUMP_INTERVAL_S < time.tv_sec)) {
 			if (! dump_aid_data(&config[i])) {
 				ret = FALSE;
 				break;
@@ -647,7 +650,7 @@ static gboolean agps_online_cmd(void *_args)
 			map_set_status("Dump AID data as local cache...", FALSE);
 			UNLOCK_UI();
 			sleep(1);
-			agps_dump_aid_data(FALSE);
+			agps_dump_aid_data(TRUE);
 		}
 	} else {
 		LOCK_UI();

@@ -94,6 +94,9 @@ typedef struct __map_view_t
 	map_view_tile_layer_t fglayer;
 	map_view_tile_layer_t bglayer;
 
+	/* sky map for SVs */
+	GdkPixbuf *sky_pixbuf;
+
 	int bg_alpha_idx;
 
 	gboolean invalidate;
@@ -124,7 +127,7 @@ typedef struct __context_t
 	/* FIXME: configurable? */
 	gboolean run_gps_on_start;
 
-	gboolean location_inview;
+	gboolean cursor_in_view;
 
 	gboolean dl_if_absent;
 
@@ -155,6 +158,8 @@ typedef struct __context_t
 	GdkGC *grid_text_gc;
 
 	GdkGC *heading_gc;
+
+	GdkGC *skymap_gc;
 
 } context_t;
 
@@ -218,7 +223,7 @@ extern const char *		g_base_color_names[BASE_COLOR_COUNT];
 extern GdkColor 		g_base_colors[BASE_COLOR_COUNT];
 extern GdkPixbuf *		g_base_color_pixbufs[BASE_COLOR_COUNT];
 extern double			g_pixel_meters[MAX_ZOOM_LEVELS];
-extern char 			g_ubx_receiver_versions[128];
+extern char 			g_ubx_receiver_versions[64];
 
 extern GtkWidget *		g_window;
 extern menu_item_t		g_menus[TAB_ID_MAX];

@@ -69,6 +69,8 @@ static void unref_gcs()
 		g_object_unref(g_context.grid_text_gc);
 	if (g_context.heading_gc)
 		g_object_unref(g_context.heading_gc);
+	if (g_context.skymap_gc)
+		g_object_unref(g_context.skymap_gc);
 }
 
 /**
@@ -132,6 +134,11 @@ static void create_gcs(GtkWidget *widget)
 	gdk_gc_set_line_attributes(g_context.heading_gc, 5, GDK_LINE_SOLID, GDK_CAP_ROUND,
 			GDK_JOIN_ROUND);
 	gdk_gc_set_function(g_context.heading_gc, GDK_INVERT);
+
+	g_context.skymap_gc = gdk_gc_new(win);
+	gdk_gc_set_rgb_fg_color(g_context.skymap_gc, &g_base_colors[ID_COLOR_Red]);
+	gdk_gc_set_line_attributes(g_context.skymap_gc, 1, GDK_LINE_SOLID, GDK_CAP_ROUND,
+			GDK_JOIN_ROUND);
 }
 
 void drawing_init(GtkWidget *window)
@@ -143,6 +150,8 @@ void drawing_init(GtkWidget *window)
 	g_view.pixmap = NULL;
 	g_view.fglayer.tile_pixbuf = NULL;
 	g_view.bglayer.tile_pixbuf = NULL;
+
+	g_view.sky_pixbuf = NULL;
 
 	int i;
 	for (i = 0; i < BASE_COLOR_COUNT; i++) {
@@ -180,4 +189,7 @@ void drawing_cleanup()
 
 	if (g_view.bglayer.tile_pixbuf)
 		g_object_unref(g_view.bglayer.tile_pixbuf);
+
+	if (g_view.sky_pixbuf)
+		g_object_unref(g_view.sky_pixbuf);
 }
