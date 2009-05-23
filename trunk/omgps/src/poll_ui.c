@@ -222,12 +222,6 @@ void map_redraw_view_gps_running()
 	map_draw_position();
 }
 
-#define OUT_VIEW() 																		\
-	(g_view.fglayer.visible.x < 0 || g_view.fglayer.visible.y < 0 || 					\
-	 g_view.pos_offset.x >= g_view.fglayer.visible.x + g_view.fglayer.visible.width ||	\
-	 g_view.pos_offset.y >= g_view.fglayer.visible.x + g_view.fglayer.visible.height)
-
-
 static void draw_labels(gboolean force_redraw)
 {
 	if (! GTK_WIDGET_VISIBLE(nav_da))
@@ -314,22 +308,25 @@ void poll_update_ui()
 
 	memset(nav_text, 0, nav_da_fonts);
 
-	if (g_gpsdata.height_valid) {
+	if (g_gpsdata.height_valid)
 		sprintf(&nav_text[NAV_DA_H_OFF], "%dm", (int)g_gpsdata.height);
-	}
 
 	if (g_gpsdata.vel_valid) {
 		sprintf(&nav_text[NAV_DA_SPD_OFF], "%.1fmps", g_gpsdata.speed_2d);
 		draw_speed_heading((g_gpsdata.speed_2d > 0.1? (int)g_gpsdata.heading_2d : -1));
 	}
 
-	if (g_gpsdata.svinfo_valid) {
+	if (g_gpsdata.svinfo_valid)
 		sprintf(&nav_text[NAV_DA_SV_OFF], "%d/%d", g_gpsdata.sv_in_use, g_gpsdata.sv_get_signal);
-	}
 
 	draw_labels(FALSE);
 
-	if (g_context.location_inview && OUT_VIEW()) {
+	gboolean out_of_view = g_view.pos_offset.x < g_view.fglayer.visible.x ||
+		g_view.pos_offset.y < g_view.fglayer.visible.y ||
+		g_view.pos_offset.x >= g_view.fglayer.visible.x + g_view.fglayer.visible.width ||
+		g_view.pos_offset.y >= g_view.fglayer.visible.x + g_view.fglayer.visible.height;
+
+	if (g_context.cursor_in_view && out_of_view) {
 		map_centralize();
 	} else if (offset_sensitive) {
 		increment_draw();
