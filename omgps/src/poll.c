@@ -496,20 +496,19 @@ void stop_poll_thread()
 			fso_gypsy_cleanup();
 		} else {
 			if (g_gpsdata.sv_in_use >= 3) {
-				PangoLayout *layout = gtk_widget_create_pango_layout (g_window, "Dumping AID data...");
+				PangoLayout *layout = gtk_widget_create_pango_layout (g_view.da, "Dumping AID data...");
 				PangoFontDescription *desc = pango_font_description_from_string ("Sans Bold 20px");
 				pango_layout_set_font_description (layout, desc);
 
 				int text_width, text_height;
 				pango_layout_get_size (layout, &text_width, &text_height);
-			    text_width /= PANGO_SCALE;
+				text_width /= PANGO_SCALE;
 
-				gdk_draw_layout(g_window->window, g_view.da->style->black_gc,
+				gdk_draw_layout(g_view.da->window, g_view.da->style->black_gc,
 					(g_view.width - text_width) >> 1, g_view.height >> 1, layout);
 
 				pango_font_description_free (desc);
 				g_object_unref (layout);
-
 				/* Aha!*/
 				gdk_flush();
 
