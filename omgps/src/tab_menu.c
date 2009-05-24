@@ -167,7 +167,7 @@ static void init_panes()
 	/* Tab'd window */
 	notebook = gtk_notebook_new();
 	gtk_container_add(GTK_CONTAINER (g_window), notebook);
-	gtk_notebook_set_scrollable(GTK_NOTEBOOK(notebook), TRUE);
+	gtk_notebook_set_scrollable(GTK_NOTEBOOK(notebook), FALSE);
 	gtk_notebook_set_show_border(GTK_NOTEBOOK(notebook), FALSE);
 	gtk_notebook_set_show_tabs(GTK_NOTEBOOK(notebook), FALSE);
 
