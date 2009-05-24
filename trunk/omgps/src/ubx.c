@@ -438,7 +438,7 @@ static gboolean ubx_parse_nav_svinfo(ubx_msg_t *msg)
 		return FALSE;
 	}
 
-	int i, j= 0;
+	int i, j = 0;
 	U1 flags, sv_id, *p;
 	svinfo_channel_t *sv;
 
