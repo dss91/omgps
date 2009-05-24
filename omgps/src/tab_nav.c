@@ -93,7 +93,7 @@ static void draw_skymap_fg(GdkDrawable *canvas)
 	for (i=0; i<g_gpsdata.sv_channel_count; i++) {
 		sv = &g_gpsdata.sv_channels[i];
 		if (sv->elevation >= 0 && sv->azimuth >= 0) {
-			r = SKY_IMAGE_R * sv->elevation / 90.0;
+			r = SKY_IMAGE_R * (1.0 - sv->elevation / 90.0);
 			deg = sv->azimuth * DEG_TO_RAD;
 			x = center_x - r * cos(deg);
 			y = center_y + r * sin(deg);
