@@ -573,9 +573,8 @@ GtkWidget * ctx_tab_dl_tiles_create()
 	batchlist_notebook = gtk_notebook_new();
 	gtk_widget_set_size_request(batchlist_notebook, -1, 160);
 
-	gtk_notebook_set_scrollable(GTK_NOTEBOOK(batchlist_notebook), TRUE);
+	gtk_notebook_set_scrollable(GTK_NOTEBOOK(batchlist_notebook), FALSE);
 	gtk_notebook_set_show_border(GTK_NOTEBOOK(batchlist_notebook), FALSE);
-	gtk_notebook_set_show_tabs(GTK_NOTEBOOK(batchlist_notebook), TRUE);
 
 	GtkWidget *tab_label = gtk_label_new("action");
 	gtk_notebook_append_page (GTK_NOTEBOOK (batchlist_notebook), button_vbox, tab_label);
