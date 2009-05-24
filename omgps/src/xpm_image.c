@@ -24,6 +24,10 @@
 #include "xpm/fixmap_src.xpm"
 #include "xpm/fixmap_dest.xpm"
 
+#include "xpm/sv_in_use.xpm"
+#include "xpm/sv_signal.xpm"
+#include "xpm/sv_no_signal.xpm"
+
 #include "xpm/letter_0.xpm"
 #include "xpm/letter_1.xpm"
 #include "xpm/letter_2.xpm"
@@ -84,6 +88,9 @@ void xpm_image_init(GdkDrawable *drawable)
 	xpm_reg(drawable, XPM_ID_TRACK_OFF,			track_off_xpm);
 	xpm_reg(drawable, XPM_ID_FIXMAP_SRC,		fixmap_src_xpm);
 	xpm_reg(drawable, XPM_ID_FIXMAP_DEST,		fixmap_dest_xpm);
+	xpm_reg(drawable, XPM_ID_SV_IN_USE,			sv_in_use_xpm);
+	xpm_reg(drawable, XPM_ID_SV_SIGNAL,			sv_signal_xpm);
+	xpm_reg(drawable, XPM_ID_SV_NO_SIGNAL,		sv_no_signal_xpm);
 
 	xpm_reg(drawable, XPM_ID_LETTER_0,			letter_0_xpm);
 	xpm_reg(drawable, XPM_ID_LETTER_1,			letter_1_xpm);

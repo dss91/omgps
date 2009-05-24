@@ -9,7 +9,7 @@ desktopdir = $(datadir)/applications
 dist_desktop_DATA = data/$(PACKAGE).desktop
 
 appicondir = $(datadir)/pixmaps/$(PACKAGE)
-dist_appicon_DATA = data/$(PACKAGE).png data/sky.jpg
+dist_appicon_DATA = data/$(PACKAGE).png data/sky.png
 
 ############ source files ###################
 

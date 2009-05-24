@@ -1,6 +1,7 @@
 #include <math.h>
 #include "omgps.h"
 #include "gps.h"
+#include "xpm_image.h"
 
 static GtkWidget *ubx_svinfo_treeview, *ubx_svinfo_treeview_sw;
 static GtkListStore *ubx_svinfo_store = NULL;
@@ -20,6 +21,8 @@ static GtkWidget *time_label, *notebook, *skymap_da;
 #define CIRCLE_ARC		23040
 
 static int da_width, da_height;
+
+static U4 last_hash[SV_MAX_CHANNELS], hash[SV_MAX_CHANNELS];
 
 typedef enum {
 	PAGE_NUM_BASIC,
@@ -76,39 +79,34 @@ static void draw_skymap_fg(GdkDrawable *canvas)
 {
 	#define SKY_IMAGE_R		(SKY_IMAGE_SIZE >> 1)
 	#define DEG_TO_RAD 		(M_PI / 180)
+	#define IMG_SIZE 		15
+	#define IMG_SIZE_HALF 	7
 
 	int i;
 	svinfo_channel_t *sv;
 	int r, x, y;
 	double deg;
-	int color_id, last_color_id = -1;
+	XPM_ID_T xpm_id;
 	int center_x = da_width >> 1;
 	int center_y = da_height >> 1;
 
 	for (i=0; i<g_gpsdata.sv_channel_count; i++) {
 		sv = &g_gpsdata.sv_channels[i];
 		if (sv->elevation >= 0 && sv->azimuth >= 0) {
-			r = SKY_IMAGE_R * cos(sv->elevation * DEG_TO_RAD);
+			r = SKY_IMAGE_R * sv->elevation / 90.0;
 			deg = sv->azimuth * DEG_TO_RAD;
 			x = center_x - r * cos(deg);
 			y = center_y + r * sin(deg);
 
-			if (sv->flags & 0x01) {
-				color_id = ID_COLOR_Red;
-				r = 10;
-			} else if (sv->cno > 0) {
-				color_id = ID_COLOR_Blue;
-			    r = 8;
-			} else {
-				color_id = ID_COLOR_Yellow;
-				r = 6;
-			}
-			if (color_id != last_color_id) {
-				gdk_gc_set_rgb_fg_color(g_context.skymap_gc, &g_base_colors[color_id]);
-				last_color_id = color_id;
-			}
+			if (sv->flags & 0x01)
+				xpm_id = XPM_ID_SV_IN_USE;
+			else if (sv->cno > 0)
+				xpm_id = XPM_ID_SV_SIGNAL;
+			else
+				xpm_id = XPM_ID_SV_NO_SIGNAL;
 
-			gdk_draw_arc(canvas, g_context.skymap_gc, TRUE, x - r, y - r, r << 1, r << 1, 0, CIRCLE_ARC);
+			gdk_draw_pixbuf(canvas, g_context.skymap_gc, g_xpm_images[xpm_id].pixbuf,
+				0, 0, x - IMG_SIZE_HALF, y - IMG_SIZE_HALF, IMG_SIZE, IMG_SIZE, GDK_RGB_DITHER_NONE, -1, -1);
 		}
 	}
 }
@@ -128,7 +126,6 @@ static void draw_skymap_bg(GdkDrawable *canvas)
 	off_y = (da_height - SKY_IMAGE_SIZE) / 2;
 
 	if (g_view.sky_pixbuf) {
-		gdk_draw_rectangle (canvas, g_context.drawingarea_bggc, TRUE, 0, 0, da_width, da_height);
 		gdk_draw_pixbuf (canvas, g_context.drawingarea_bggc, g_view.sky_pixbuf,
 			0, 0, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE, GDK_RGB_DITHER_NONE, -1, -1);
 	}
@@ -140,8 +137,8 @@ static void draw_skymap_bg(GdkDrawable *canvas)
 
 	r = SKY_IMAGE_SIZE >> 1;
 
-	for (i=0; i<9; i++) {
-		d = r * cos(i * 10 * DEG_TO_RAD);
+	for (i=1; i<=9; i++) {
+		d = r * i / 9.0;
 		gdk_draw_arc(canvas, g_context.grid_line_gc, FALSE,
 			center_x - d, center_y - d, d << 1, d << 1, 0, CIRCLE_ARC);
 	}
@@ -149,21 +146,38 @@ static void draw_skymap_bg(GdkDrawable *canvas)
 
 static inline void update_skymap()
 {
-	/* TODO: check SV count */
+	int i;
+	U1 color;
+	svinfo_channel_t *sv;
+
+	memset(hash, 0, sizeof(hash));
+
+	for (i=0; i<g_gpsdata.sv_channel_count; i++) {
+		sv = &g_gpsdata.sv_channels[i];
+		color = (sv->flags & 0x01)? 0x2 : ((sv->cno > 0)? 0x1 : 0x0);
+		hash[i] = color | (sv->elevation << 8) | (sv->azimuth << 24);
+	}
+
+	if (memcmp(hash, last_hash, sizeof(hash)) == 0)
+		return;
+
+	memcpy(last_hash, hash, sizeof(last_hash));
 
 	int off_x = (da_width - SKY_IMAGE_SIZE) / 2;
 	int off_y = (da_height - SKY_IMAGE_SIZE) / 2;
 
 	if (g_view.sky_pixbuf) {
-		gdk_draw_pixbuf (skymap_da->window, g_context.drawingarea_bggc, g_view.sky_pixbuf,
+		gdk_draw_pixbuf (g_view.pixmap, g_context.drawingarea_bggc, g_view.sky_pixbuf,
 			0, 0, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE,	GDK_RGB_DITHER_NONE, -1, -1);
+		draw_skymap_fg(g_view.pixmap);
+		gdk_draw_drawable (skymap_da->window, g_context.drawingarea_bggc, g_view.pixmap,
+			off_x, off_y, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
 	} else {
 		draw_skymap_bg(g_view.pixmap);
 		gdk_draw_drawable (skymap_da->window, g_context.drawingarea_bggc, g_view.pixmap,
 			off_x, off_y, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
+		draw_skymap_fg(skymap_da->window);
 	}
-
-	draw_skymap_fg(skymap_da->window);
 }
 
 /**
@@ -358,8 +372,10 @@ static GtkWidget * create_basic_nav_table()
 
 static gboolean skymap_da_expose_event (GtkWidget *widget, GdkEventExpose *evt, gpointer data)
 {
-	if (POLL_STATE_TEST(RUNNING))
+	if (POLL_STATE_TEST(RUNNING)) {
+		memset(last_hash, 0, sizeof(last_hash));
 		update_skymap();
+	}
 
 	return FALSE;
 }
@@ -379,7 +395,7 @@ static gboolean skymap_da_configure_event (GtkWidget *widget, GdkEventConfigure 
 	}
 
 	GError *error = NULL;
-	char *file = ICONDIR"/sky.jpg";
+	char *file = ICONDIR"/sky.png";
 	g_view.sky_pixbuf = gdk_pixbuf_new_from_file(file, &error);
 
 	if (! g_view.sky_pixbuf) {
@@ -397,13 +413,14 @@ static gboolean skymap_da_configure_event (GtkWidget *widget, GdkEventConfigure 
 				gdk_rgb_get_colormap(), off_x, off_y, 0, 0, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
 		}
 	}
+
+	gdk_draw_rectangle (skymap_da->window, skymap_da->style->bg_gc[GTK_STATE_NORMAL], TRUE, 0, 0, da_width, da_height);
+
 	return FALSE;
 }
 
 static GtkWidget * create_skymap()
 {
-	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
-
 	GtkWidget *sw = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (sw), GTK_SHADOW_NONE);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (sw),
@@ -414,11 +431,12 @@ static GtkWidget * create_skymap()
 	g_signal_connect (skymap_da, "expose-event", G_CALLBACK(skymap_da_expose_event), NULL);
 	g_signal_connect (skymap_da, "configure-event", G_CALLBACK(skymap_da_configure_event), NULL);
 
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(sw), skymap_da);
+	GtkWidget *viewport = gtk_viewport_new(NULL, NULL);
+	gtk_viewport_set_shadow_type(GTK_VIEWPORT (viewport), GTK_SHADOW_NONE);
+	gtk_container_add(GTK_CONTAINER(sw), viewport);
+	gtk_container_add(GTK_CONTAINER(viewport), skymap_da);
 
-	gtk_container_add(GTK_CONTAINER(vbox), sw);
-
-	return vbox;
+	return sw;
 }
 
 static inline void update_nav_basic()
@@ -468,8 +486,7 @@ void update_nav_tab()
 		update_svinfo();
 		break;
 	default:
-		//update_skymap();
-		;
+		update_skymap();
 	}
 }
 
@@ -501,6 +518,8 @@ void notebook_switched(GtkWidget *notebook, GtkNotebookPage *page, int num, gpoi
 
 GtkWidget * nav_tab_create()
 {
+	memset(last_hash, 0, sizeof(last_hash));
+
 	GtkWidget *label;
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
 
@@ -514,7 +533,7 @@ GtkWidget * nav_tab_create()
 	gtk_notebook_set_show_border(GTK_NOTEBOOK(notebook), FALSE);
 	g_signal_connect (G_OBJECT (notebook), "switch-page", G_CALLBACK (notebook_switched), NULL);
 
-	gtk_box_pack_start (GTK_BOX (vbox), notebook, TRUE, TRUE, 5);
+	gtk_box_pack_start (GTK_BOX (vbox), notebook, TRUE, TRUE, 0);
 
 	/* basic table */
 	basicinfo_table = create_basic_nav_table();
