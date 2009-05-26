@@ -393,6 +393,8 @@ static void init_g_context_vars()
 	g_context.run_gps_on_start = TRUE;
 	g_context.cursor_in_view = TRUE;
 	g_context.sbas_enable = TRUE;
+
+	g_context.speed_unit = SPEED_UNIT_KMPH;
 }
 
 static void init(gboolean log2console)

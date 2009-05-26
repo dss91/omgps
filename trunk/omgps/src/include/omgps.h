@@ -141,6 +141,9 @@ typedef struct __context_t
 	gboolean show_latlon_grid;
 	gboolean track_enabled;
 
+	/* internal speed unit is m/s. the speed_unit is used for display etc. */
+	speed_unit_t speed_unit;
+
 	/* draw lines etc. */
 
 	GdkGC *pos_hacc_circle_gc;

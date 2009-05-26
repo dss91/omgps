@@ -11,7 +11,11 @@ static GtkWidget *basicinfo_table, *ogpsd_svinfo_treeview, *ogpsd_svinfo_treevie
 static GtkListStore *ogpsd_svinfo_store = NULL;
 static char *ogpsd_svinfo_col_names[] = {"SVID", "USED", "Elev", "Azim", "CNO"};
 
-static GtkWidget *time_label, *notebook, *skymap_da;
+static GtkWidget *speed_unit_radios[3];
+static char *speed_unit_labels[3] = {"km/h", "mph", "m/s"};
+static speed_unit_t speed_unit_values[3] = {SPEED_UNIT_KMPH, SPEED_UNIT_MPH, SPEED_UNIT_MPS};
+
+static GtkWidget *time_label, *notebook, *skymap_da, *speed_2d_label, *vel_down_label;
 
 #define SKY_IMAGE_SIZE	450
 
@@ -66,14 +70,15 @@ static char *nav_basic_units[] = {
 	 "°",
 	 "m",
 	 "m",
-	 "m/s ",
+	 "",
 	 "°",
-	 "m/s ",
+	 "",
 };
 
 static GtkWidget *labels[ROW_COUNT];
-
 static char labels_text[ROW_COUNT][64];
+
+static inline void update_nav_basic();
 
 static void draw_skymap_fg(GdkDrawable *canvas)
 {
@@ -301,6 +306,34 @@ static void create_treeview(GtkWidget *treeview, GtkWidget *treeview_sw, char *c
 	}
 }
 
+static void on_speed_unit_changed()
+{
+	char *label;
+	if (g_context.speed_unit == SPEED_UNIT_KMPH)
+		label = speed_unit_labels[0];
+	else if (g_context.speed_unit == SPEED_UNIT_MPH)
+		label = speed_unit_labels[1];
+	else
+		label = speed_unit_labels[2];
+
+	gtk_label_set_text(GTK_LABEL(speed_2d_label), label);
+	gtk_label_set_text(GTK_LABEL(vel_down_label), label);
+
+	update_nav_basic();
+}
+
+static void speed_unit_changed(GtkWidget *widget, gpointer data)
+{
+	speed_unit_t unit = (speed_unit_t)data;
+	if (unit == g_context.speed_unit)
+		return;
+
+	g_context.speed_unit = unit;
+
+	on_speed_unit_changed();
+	poll_ui_on_speed_unit_changed();
+}
+
 /**
  * GtkTreeview is not used here, because it's poor performance according to frequently updates.
  */
@@ -355,6 +388,11 @@ static GtkWidget * create_basic_nav_table()
 		gtk_misc_set_alignment(GTK_MISC(label), 0.0, 0.5);
 		gtk_misc_set_padding(GTK_MISC(label), padding_x, padding_y);
 
+		if (i == SPEED2D)
+			speed_2d_label = label;
+		else if (i == VELDOWN)
+			vel_down_label = label;
+
 		event_box = gtk_event_box_new();
 		gtk_widget_modify_bg(event_box, GTK_STATE_NORMAL, (i % 2 == 0)? color_1 : color_2);
 
@@ -362,8 +400,34 @@ static GtkWidget * create_basic_nav_table()
 		gtk_container_add(GTK_CONTAINER(vbox_3), event_box);
 	}
 
+	on_speed_unit_changed();
+
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+
+	/* speed unit */
+
+	GtkWidget *speed_unit_hbox = gtk_hbox_new(FALSE, 10);
+	GtkWidget *speed_unit_head = gtk_label_new("Speed unit: ");
+	gtk_box_pack_start(GTK_BOX(speed_unit_hbox), speed_unit_head, FALSE, FALSE, 5);
+
+	for (i=0; i<3; i++) {
+		speed_unit_radios[i] = gtk_radio_button_new_with_label_from_widget(
+			i==0? NULL : GTK_RADIO_BUTTON(speed_unit_radios[i-1]), speed_unit_labels[i]);
+		gtk_box_pack_start(GTK_BOX(speed_unit_hbox), speed_unit_radios[i], FALSE, FALSE, 10);
+		g_signal_connect(G_OBJECT(speed_unit_radios[i]), "toggled",
+			G_CALLBACK(speed_unit_changed), (gpointer) speed_unit_values[i]);
+	}
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(speed_unit_radios[0]),
+		g_context.speed_unit == SPEED_UNIT_KMPH);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(speed_unit_radios[1]),
+		g_context.speed_unit == SPEED_UNIT_MPH);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(speed_unit_radios[2]),
+		g_context.speed_unit == SPEED_UNIT_MPS);
+
+	gtk_box_pack_start (GTK_BOX (vbox), speed_unit_hbox, FALSE, FALSE, 5);
+
 	GtkWidget *padding = gtk_label_new("\n\n\n\n");
 	gtk_box_pack_end(GTK_BOX(vbox), padding, TRUE, TRUE, 0);
 
@@ -442,6 +506,7 @@ static GtkWidget * create_skymap()
 static inline void update_nav_basic()
 {
 	int i;
+	float speed_2d, vel_down;
 
 	for (i = 0; i<ROW_COUNT; i++)
 		labels_text[i][0] = '\0';
@@ -459,6 +524,16 @@ static inline void update_nav_basic()
 	}
 
 	if (g_gpsdata.vel_valid) {
+		speed_2d = g_gpsdata.speed_2d;
+		vel_down = g_gpsdata.vel_down;
+		if (g_context.speed_unit == SPEED_UNIT_KMPH) {
+			speed_2d *= MPS_TO_KMPH;
+			vel_down *= MPS_TO_KMPH;
+		} else if (g_context.speed_unit == SPEED_UNIT_MPH) {
+			speed_2d *= MPS_TO_MPH;
+			vel_down *= MPS_TO_MPH;
+		}
+
 		sprintf(labels_text[SPEED2D], "%.2f", g_gpsdata.speed_2d);
 		sprintf(labels_text[HEADING2D], "%.1f", g_gpsdata.heading_2d);
 		sprintf(labels_text[VELDOWN], "%.2f", g_gpsdata.vel_down);
@@ -475,7 +550,7 @@ void update_nav_tab()
 	time_t tm;
 	time(&tm);
 	struct tm *t = localtime(&tm);
-	strftime(buf, sizeof(buf), " (Last update time=%H:%M:%S)", t);
+	strftime(buf, sizeof(buf), " Last update time = %H:%M:%S", t);
 	gtk_label_set_text(GTK_LABEL(time_label), buf);
 
 	switch (cur_page_num) {
@@ -514,6 +589,9 @@ void nav_tab_on_show()
 void notebook_switched(GtkWidget *notebook, GtkNotebookPage *page, int num, gpointer data)
 {
 	cur_page_num = num;
+
+	if (num != PAGE_NUM_SKYMAP)
+		update_nav_tab();
 }
 
 GtkWidget * nav_tab_create()
