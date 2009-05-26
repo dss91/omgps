@@ -43,7 +43,6 @@ typedef struct __nav_da_data_t
 	int text_count;
 	int offset;
 	int width;
-	XPM_ID_T image_ids[8];
 	U4 hash;
 	U4 last_hash;
 } nav_da_data_t;
@@ -452,7 +451,7 @@ void ctx_gpsfix_on_poll_state_changed()
 	if (g_context.poll_state == POLL_STATE_STARTING || g_context.poll_state == POLL_STATE_STOPPING ) {
 		int i;
 		for (i=0; i<3; i++)
-			nav_da_data[i].hash = INVALID_HASH;
+			nav_da_data[i].hash = nav_da_data[i].last_hash = INVALID_HASH;
 	}
 }
 
@@ -492,9 +491,9 @@ GtkWidget * ctx_tab_gps_fix_create()
 	nav_da_data[2].offset = nav_da_data[1].offset + nav_da_data[1].width;
 	nav_da_data[2].width = NAV_SV_NUM * FONT_WIDTH;
 
-	nav_da_data[0].hash = INVALID_HASH;
-	nav_da_data[1].hash = INVALID_HASH;
-	nav_da_data[2].hash = INVALID_HASH;
+	nav_da_data[0].hash = nav_da_data[0].last_hash = INVALID_HASH;
+	nav_da_data[1].hash = nav_da_data[0].last_hash = INVALID_HASH;
+	nav_da_data[2].hash = nav_da_data[0].last_hash = INVALID_HASH;
 
 	nav_da = gtk_drawing_area_new();
 	gtk_widget_set_size_request(nav_da, -1, FONT_HEIGHT);
