@@ -356,6 +356,11 @@ void poll_update_ui()
 
 	if (g_gpsdata.vel_valid) {
 		speed_2d = g_gpsdata.speed_2d;
+		if (g_context.speed_unit == SPEED_UNIT_KMPH) {
+			speed_2d *= MPS_TO_KMPH;
+		} else if (g_context.speed_unit == SPEED_UNIT_MPH) {
+			speed_2d *= MPS_TO_MPH;
+		}
 		da_data->hash = (U4)((int)(speed_2d * 10));
 		sprintf(da_data->text, "%6.1f%c", speed_2d, speed_unit_sign);
 	} else {
