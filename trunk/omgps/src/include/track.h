@@ -55,7 +55,6 @@ extern void track_tab_on_show();
 extern char *get_cur_replay_filepath();
 extern void track_replay_cleanup();
 
-extern gboolean track_new();
 extern void track_add(/*double lat, double lon, U4 gps_tow*/);
 extern void track_cleanup();
 extern gboolean track_saveall(gboolean free);
