@@ -534,9 +534,9 @@ static inline void update_nav_basic()
 			vel_down *= MPS_TO_MPH;
 		}
 
-		sprintf(labels_text[SPEED2D], "%.2f", g_gpsdata.speed_2d);
+		sprintf(labels_text[SPEED2D], "%.2f", speed_2d);
 		sprintf(labels_text[HEADING2D], "%.1f", g_gpsdata.heading_2d);
-		sprintf(labels_text[VELDOWN], "%.2f", g_gpsdata.vel_down);
+		sprintf(labels_text[VELDOWN], "%.2f", vel_down);
 	}
 
 	for (i = 0; i<ROW_COUNT; i++) {
