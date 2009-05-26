@@ -41,9 +41,10 @@
 #include "xpm/letter_dot.xpm"
 #include "xpm/letter_minus.xpm"
 #include "xpm/letter_slash.xpm"
-#include "xpm/letter_m.xpm"
-#include "xpm/letter_p.xpm"
-#include "xpm/letter_s.xpm"
+#include "xpm/unit_m.xpm"
+#include "xpm/unit_mps.xpm"
+#include "xpm/unit_mph.xpm"
+#include "xpm/unit_kmph.xpm"
 
 static void xpm_reg(GdkDrawable *drawable, XPM_ID_T id, gchar *data[])
 {
@@ -105,9 +106,10 @@ void xpm_image_init(GdkDrawable *drawable)
 	xpm_reg(drawable, XPM_ID_LETTER_dot,		letter_dot_xpm);
 	xpm_reg(drawable, XPM_ID_LETTER_minus,		letter_minus_xpm);
 	xpm_reg(drawable, XPM_ID_LETTER_slash,		letter_slash_xpm);
-	xpm_reg(drawable, XPM_ID_LETTER_m,			letter_m_xpm);
-	xpm_reg(drawable, XPM_ID_LETTER_p,			letter_p_xpm);
-	xpm_reg(drawable, XPM_ID_LETTER_s,			letter_s_xpm);
+	xpm_reg(drawable, XPM_ID_UNIT_m,			unit_m_xpm);
+	xpm_reg(drawable, XPM_ID_UNIT_mps,			unit_mps_xpm);
+	xpm_reg(drawable, XPM_ID_UNIT_mph,			unit_mph_xpm);
+	xpm_reg(drawable, XPM_ID_UNIT_kmph,			unit_kmph_xpm);
 }
 
 void xpm_image_cleanup()

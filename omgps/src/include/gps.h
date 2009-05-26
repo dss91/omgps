@@ -39,6 +39,9 @@ typedef unsigned long long	U8;
   * @see: http://users.erols.com/dlwilson/gpshdop.htm */
 #define DOP_TO_HACC					3
 
+#define MPS_TO_KMPH					3.6
+#define MPS_TO_MPH					2.237
+
 /**
  * non-suspending does not mean running, maybe in starting state.
  */
@@ -55,6 +58,13 @@ typedef enum __poll_engine_t
 	POLL_ENGINE_UBX,
 	POLL_ENGINE_OGPSD
 } poll_engine_t;
+
+typedef enum __speed_unit_t
+{
+	SPEED_UNIT_KMPH,
+	SPEED_UNIT_MPS,
+	SPEED_UNIT_MPH
+} speed_unit_t;
 
 /**
  * A satellite channel
@@ -229,6 +239,7 @@ extern gboolean issue_ctrl_cmd(ctrl_cmd_func_t f, void *args);
 extern void sync_gpstime_to_system();
 
 extern void poll_update_ui();
+extern void poll_ui_on_speed_unit_changed();
 
 extern void ctx_gpsfix_on_poll_engine_changed();
 extern void ctx_gpsfix_on_poll_state_changed();

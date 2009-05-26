@@ -3,23 +3,23 @@
 #include "sound.h"
 #include "track.h"
 
-#define NAV_DA_H_OFF	0
-#define NAV_DA_SPD_OFF	7
-#define NAV_DA_SV_OFF	15
+#define NAV_H_NUM		7
+#define NAV_SPD_NUM		7
+#define NAV_SV_NUM		5
 
-#define NUM_NAV_DA		3
-#define FONT_IMG_WIDTH	18
-#define FONT_IMG_HEIGHT	36
+/* normal image size */
+#define FONT_WIDTH		18
+#define FONT_HEIGHT		36
 
-static GtkWidget *nav_da;
-#define NAV_DA_FONT_NUM 	20
-static char nav_text[NAV_DA_FONT_NUM + 1];
-static char last_nav_text[NAV_DA_FONT_NUM + 1];
+#define HEADING_WIDTH	40
+#define HEADING_HEIGHT	40
 
-#define HEADING_AREA_WIDTH	40
-#define HEADING_AREA_HEIGHT	40
-static GtkWidget *heading_da;
+#define BOTTOM			38
+
+static GtkWidget *nav_da, *heading_da;
 static GtkWidget *poll_engine_image, *track_image;
+
+#define INVALID_HASH	0xFFFF
 
 #define OUTER_WIDTH		4
 #define INTER_WIDTH		2
@@ -35,6 +35,20 @@ static gboolean last_rect_valid = FALSE;
 
 static int last_heading = -1;
 static int lastx = 0, lasty = 0;
+static char speed_unit_sign;
+
+typedef struct __nav_da_data_t
+{
+	char text[8];
+	int text_count;
+	int offset;
+	int width;
+	XPM_ID_T image_ids[8];
+	U4 hash;
+	U4 last_hash;
+} nav_da_data_t;
+
+static nav_da_data_t nav_da_data[3];
 
 #define RESET_HEADING() \
 	lastx = lasty = 0;	\
@@ -46,8 +60,8 @@ static int lastx = 0, lasty = 0;
 static void draw_speed_heading(int heading)
 {
 	#define DEG_TO_RAD 		(M_PI / 180)
-	#define HEADING_W_HALF	(HEADING_AREA_WIDTH >> 1)
-	#define HEADING_H_HALF	(HEADING_AREA_HEIGHT >> 1)
+	#define HEADING_W_HALF	(HEADING_WIDTH >> 1)
+	#define HEADING_H_HALF	(HEADING_HEIGHT >> 1)
 	#define HEADING_R 		(MIN(HEADING_W_HALF, HEADING_H_HALF) - 6)
 
 	if (heading == last_heading)
@@ -79,7 +93,7 @@ static gboolean heading_da_expose_event (GtkWidget *widget, GdkEventExpose *evt,
 
 	gdk_draw_pixbuf (heading_da->window, g_context.drawingarea_bggc,
 		g_xpm_images[XPM_ID_POSITION_HEADING].pixbuf,
-		0, 0, 0, 0, HEADING_AREA_WIDTH, HEADING_AREA_HEIGHT,
+		0, 0, 0, 0, HEADING_WIDTH, HEADING_HEIGHT,
 		GDK_RGB_DITHER_NONE, -1, -1);
 
 	RESET_HEADING();
@@ -222,26 +236,23 @@ void map_redraw_view_gps_running()
 	map_draw_position();
 }
 
-static void draw_labels(gboolean force_redraw)
+static void draw_labels(nav_da_data_t *da_data)
 {
-	if (! GTK_WIDGET_VISIBLE(nav_da))
-		return;
+	int i, w, h, offset = da_data->offset;
+	XPM_ID_T id;
+	char c;
 
 	GdkGC *gc = nav_da->style->bg_gc[GTK_WIDGET_STATE(nav_da)];
+	gdk_draw_rectangle (nav_da->window, gc, TRUE, offset, (BOTTOM - FONT_HEIGHT), da_data->width, FONT_HEIGHT);
 
-	int i, offset = 0;
-	XPM_ID_T id;
+	da_data->last_hash = da_data->hash;
+	if (da_data->hash == INVALID_HASH)
+		return;
 
-	for (i=0; i<NAV_DA_FONT_NUM; i++) {
-		offset += FONT_IMG_WIDTH;
+	for (i=0; i< da_data->text_count; i++) {
+		c = da_data->text[i];
 
-		if (! force_redraw && nav_text[i] == last_nav_text[i])
-			continue;
-
-		gdk_draw_rectangle (nav_da->window,	gc,	TRUE, offset, 2, FONT_IMG_WIDTH, FONT_IMG_HEIGHT);
-		last_nav_text[i] = nav_text[i];
-
-		switch(nav_text[i]) {
+		switch(c) {
 		case '0':
 			id = XPM_ID_LETTER_0; break;
 		case '1':
@@ -268,26 +279,43 @@ static void draw_labels(gboolean force_redraw)
 			id = XPM_ID_LETTER_slash; break;
 		case '-':
 			id = XPM_ID_LETTER_minus; break;
-		case 'm':
-			id = XPM_ID_LETTER_m; break;
-		case 'p':
-			id = XPM_ID_LETTER_p; break;
-		case 's':
-			id = XPM_ID_LETTER_s; break;
+		case 'M': /* m */
+			id = XPM_ID_UNIT_m;	break;
+		case 'K': /* km/h */
+			id = XPM_ID_UNIT_kmph; break;
+		case 'S': /* m/s */
+			id = XPM_ID_UNIT_mps; break;
+		case 'L': /* mph */
+			id = XPM_ID_UNIT_mph; break;
 		default:
-			id = XPM_ID_NONE; break;
+			id = XPM_ID_NONE;
+			break;
 		}
 
-		if (id != XPM_ID_NONE) {
-			gdk_draw_pixbuf (nav_da->window, gc, g_xpm_images[id].pixbuf,
-				0, 0, offset, 2, FONT_IMG_WIDTH, FONT_IMG_HEIGHT, GDK_RGB_DITHER_NORMAL, -1, -1);
+		if (id == XPM_ID_NONE) {
+			offset += FONT_WIDTH;
+			continue;
 		}
+
+		w = g_xpm_images[id].width;
+		h = g_xpm_images[id].height;
+		gdk_draw_pixbuf (nav_da->window, gc, g_xpm_images[id].pixbuf,
+			0, 0, offset, BOTTOM - h, w, h, GDK_RGB_DITHER_NORMAL, -1, -1);
+
+		offset += w;
 	}
 }
 
 static gboolean nav_da_expose_event (GtkWidget *widget, GdkEventExpose *evt, gpointer data)
 {
-	draw_labels(TRUE);
+	if (! GTK_WIDGET_VISIBLE(nav_da))
+		return FALSE;
+
+	int i;
+	for (i=0; i<3; i++) {
+		nav_da_data[i].hash = 0;
+		draw_labels(&nav_da_data[i]);
+	}
 	return FALSE;
 }
 
@@ -299,6 +327,9 @@ void poll_update_ui()
 {
 	static gboolean last_valid = FALSE;
 	gboolean offset_sensitive = FALSE;
+	int len;
+	float speed_2d = 0;
+	nav_da_data_t *da_data;
 
 	if (g_gpsdata.latlon_valid) {
 		g_view.pos_wgs84.lat = g_gpsdata.lat;
@@ -306,20 +337,54 @@ void poll_update_ui()
 		offset_sensitive = update_position_offset();
 	}
 
-	memset(nav_text, 0, NAV_DA_FONT_NUM);
+	/* height */
 
-	if (g_gpsdata.height_valid)
-		sprintf(&nav_text[NAV_DA_H_OFF], "%dm", (int)g_gpsdata.height);
+	da_data = &nav_da_data[0];
 
-	if (g_gpsdata.vel_valid) {
-		sprintf(&nav_text[NAV_DA_SPD_OFF], "%.1fmps", g_gpsdata.speed_2d);
-		draw_speed_heading((g_gpsdata.speed_2d > 0.1? (int)g_gpsdata.heading_2d : -1));
+	if (g_gpsdata.height_valid) {
+		da_data->hash = (U4)g_gpsdata.height;
+		sprintf(da_data->text, "%6dM", (int)g_gpsdata.height);
+	} else {
+		da_data->hash = INVALID_HASH;
 	}
 
-	if (g_gpsdata.svinfo_valid)
-		sprintf(&nav_text[NAV_DA_SV_OFF], "%d/%d", g_gpsdata.sv_in_use, g_gpsdata.sv_get_signal);
+	if (da_data->hash != da_data->last_hash)
+		draw_labels(da_data);
 
-	draw_labels(FALSE);
+	/* speed_2d */
+
+	da_data = &nav_da_data[1];
+
+	if (g_gpsdata.vel_valid) {
+		speed_2d = g_gpsdata.speed_2d;
+		da_data->hash = (U4)((int)(speed_2d * 10));
+		sprintf(da_data->text, "%6.1f%c", speed_2d, speed_unit_sign);
+	} else {
+		da_data->hash = INVALID_HASH;
+	}
+
+	if (da_data->hash != da_data->last_hash) {
+		draw_labels(da_data);
+		draw_speed_heading((da_data->hash > 0 && speed_2d > 0.1)? (int)g_gpsdata.heading_2d : -1);
+	}
+
+	/* sv */
+
+	da_data = &nav_da_data[2];
+
+	if (g_gpsdata.svinfo_valid) {
+		da_data->hash = (g_gpsdata.sv_in_use << 8) | g_gpsdata.sv_get_signal;
+		len = g_gpsdata.sv_in_use < 10? 2 : 3;
+		len += g_gpsdata.sv_get_signal < 10? 1 : 2;
+		sprintf(da_data->text,
+			"%d/%d", g_gpsdata.sv_in_use, g_gpsdata.sv_get_signal);
+	} else {
+		da_data->hash = INVALID_HASH;
+	}
+
+	if (da_data->hash != da_data->last_hash) {
+		draw_labels(da_data);
+	}
 
 	gboolean out_of_view = g_view.pos_offset.x < g_view.fglayer.visible.x ||
 		g_view.pos_offset.y < g_view.fglayer.visible.y ||
@@ -349,6 +414,16 @@ void ctx_tab_gps_fix_on_show()
 	}
 }
 
+void poll_ui_on_speed_unit_changed()
+{
+	if (g_context.speed_unit == SPEED_UNIT_KMPH)
+		speed_unit_sign = 'K';
+	else if (g_context.speed_unit == SPEED_UNIT_MPH)
+		speed_unit_sign = 'L';
+	else
+		speed_unit_sign = 'S';
+}
+
 void ctx_gpsfix_on_track_state_changed()
 {
 	gboolean enabled = g_context.track_enabled;
@@ -373,6 +448,12 @@ void ctx_gpsfix_on_poll_state_changed()
 			switch_to_main_view(CTX_ID_NONE);
 		break;
 	}
+
+	if (g_context.poll_state == POLL_STATE_STARTING || g_context.poll_state == POLL_STATE_STOPPING ) {
+		int i;
+		for (i=0; i<3; i++)
+			nav_da_data[i].hash = INVALID_HASH;
+	}
 }
 
 void ctx_gpsfix_on_poll_engine_changed()
@@ -394,26 +475,45 @@ void ctx_gpsfix_on_poll_engine_changed()
 
 GtkWidget * ctx_tab_gps_fix_create()
 {
-	memset(last_nav_text, 0, NAV_DA_FONT_NUM);
+	poll_ui_on_speed_unit_changed();
 
 	GtkWidget *hbox = gtk_hbox_new(FALSE, 0);
 
-	GtkWidget *nav_hbox = gtk_hbox_new(TRUE, 0);
+	nav_da_data[0].text_count = NAV_H_NUM;
+	nav_da_data[1].text_count = NAV_SPD_NUM;
+	nav_da_data[2].text_count = NAV_SV_NUM;
+
+	nav_da_data[0].offset = 0;
+	nav_da_data[0].width = NAV_H_NUM * FONT_WIDTH + 15;
+
+	nav_da_data[1].offset = nav_da_data[0].offset + nav_da_data[0].width ;
+	nav_da_data[1].width = NAV_SPD_NUM * FONT_WIDTH + 35;
+
+	nav_da_data[2].offset = nav_da_data[1].offset + nav_da_data[1].width;
+	nav_da_data[2].width = NAV_SV_NUM * FONT_WIDTH;
+
+	nav_da_data[0].hash = INVALID_HASH;
+	nav_da_data[1].hash = INVALID_HASH;
+	nav_da_data[2].hash = INVALID_HASH;
 
 	nav_da = gtk_drawing_area_new();
-	gtk_widget_set_size_request(nav_da, FONT_IMG_WIDTH * NAV_DA_FONT_NUM, FONT_IMG_HEIGHT);
-	gtk_container_add(GTK_CONTAINER(nav_hbox), nav_da);
+	gtk_widget_set_size_request(nav_da, -1, FONT_HEIGHT);
+	gtk_box_pack_start (GTK_BOX (hbox), nav_da, TRUE, TRUE, 0);
 	g_signal_connect (nav_da, "expose-event", G_CALLBACK(nav_da_expose_event), NULL);
 
-	gtk_box_pack_start (GTK_BOX (hbox), nav_hbox, TRUE, TRUE, 0);
+	/* tips box */
+	GtkWidget *hbox_tips = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_end (GTK_BOX (hbox), hbox_tips, FALSE, FALSE, 2);
 
+	/* speed heading */
 	heading_da = gtk_drawing_area_new();
-	gtk_widget_set_size_request(heading_da, HEADING_AREA_WIDTH, HEADING_AREA_HEIGHT);
-	gtk_box_pack_start(GTK_BOX (hbox), heading_da, FALSE, FALSE, 0);
+	gtk_widget_set_size_request(heading_da, HEADING_WIDTH, HEADING_HEIGHT);
+	gtk_box_pack_start(GTK_BOX (hbox_tips), heading_da, FALSE, FALSE, 0);
 	g_signal_connect (heading_da, "expose-event", G_CALLBACK(heading_da_expose_event), NULL);
 
+	/* track and poll engine */
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX (hbox), vbox, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX (hbox_tips), vbox, FALSE, FALSE, 0);
 
 	track_image = gtk_image_new_from_pixbuf(g_xpm_images[XPM_ID_TRACK_OFF].pixbuf);
 	gtk_box_pack_start(GTK_BOX (vbox), track_image, FALSE, FALSE, 0);

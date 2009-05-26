@@ -43,9 +43,10 @@ typedef enum
 	XPM_ID_LETTER_dot,
 	XPM_ID_LETTER_minus,
 	XPM_ID_LETTER_slash,
-	XPM_ID_LETTER_m,
-	XPM_ID_LETTER_p,
-	XPM_ID_LETTER_s,
+	XPM_ID_UNIT_m,
+	XPM_ID_UNIT_mps,
+	XPM_ID_UNIT_mph,
+	XPM_ID_UNIT_kmph,
 	XPM_ID_MAX
 } XPM_ID_T;
 
