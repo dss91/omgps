@@ -25,6 +25,8 @@ static GtkWidget *replay_button, *delete_button, *export_gpx_button;
 static char *replay_file = NULL;
 static char *replay_file_path = NULL;
 
+static void add_file_to_list(GtkTreeIter *iter, char *filepath, char *filename);
+
 static char *get_full_path(char *fullpath, int buf_len, char *file)
 {
 	if (fullpath == NULL)
@@ -129,6 +131,11 @@ int track_saveall(gboolean _free)
 
 	fclose(fp);
 
+	/* add to list */
+	GtkTreeIter iter;
+	gtk_list_store_insert (filelist_store, &iter, 0);
+	add_file_to_list(&iter, track_file_path, track_file_name);
+
 	if (_free) {
 		free(tracks);
 		tracks = NULL;
@@ -150,7 +157,7 @@ void track_cleanup()
 	track_replay_cleanup();
 }
 
-gboolean track_new()
+static void track_new()
 {
 	if (tracks == NULL) {
 		tracks = (track_group_t *)malloc(sizeof(track_group_t));
@@ -166,8 +173,6 @@ gboolean track_new()
 
 	tracks->starttime = 0;
 	tracks->last_drawn_index = 0;
-
-	return TRUE;
 }
 
 /**
@@ -317,7 +322,16 @@ static void add_file_to_list(GtkTreeIter *iter, char *filepath, char *filename)
 	struct tm *tm;
 	time_t tt;
 
+	if (! filepath) {
+		log_warn("track file path is NULL");
+		return;
+	}
+
 	FILE *fp = fopen(filepath, "r");
+	if (! fp) {
+		log_warn("Open file path %s failed", filepath);
+		return;
+	}
 	/* head */
 	fscanf(fp, TRACK_HEAD_LABEL_1"%u\n", &start_time);
 	fscanf(fp, TRACK_HEAD_LABEL_2"%u\n", &end_time);
@@ -360,15 +374,8 @@ static void stop_track_button_clicked(GtkWidget *widget, gpointer data)
 	gtk_widget_set_sensitive(new_track_button, TRUE);
 	gtk_widget_set_sensitive(stop_track_button, FALSE);
 
-	if (tracks && tracks->count > 0) {
-		/* save */
+	if (tracks && tracks->count > 0)
 		track_saveall(TRUE);
-
-		/* add to list */
-		GtkTreeIter iter;
-		gtk_list_store_insert (filelist_store, &iter, 0);
-		add_file_to_list(&iter, track_file_path, track_file_name);
-	}
 
 	ctx_gpsfix_on_track_state_changed();
 }
