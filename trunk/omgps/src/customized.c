@@ -1,6 +1,8 @@
 #include <gtk/gtk.h>
 #include <glib.h>
 
+extern GtkWidget *g_window;
+
 /**
  * font_desc: can be NULL
  */
@@ -28,7 +30,6 @@ GtkWidget* hyperlink_label_new(char *text, PangoFontDescription *font_desc,
 	return event_box;
 }
 
-
 static inline void configure_dialog(GtkWidget *dialog)
 {
 	gtk_window_set_opacity(GTK_WINDOW(dialog), 0.5);
@@ -36,11 +37,13 @@ static inline void configure_dialog(GtkWidget *dialog)
 	gdk_color_parse("#FFA500", &color);
 	gtk_widget_modify_bg(GTK_WIDGET(dialog), GTK_STATE_NORMAL, &color);
 	gtk_window_set_decorated(GTK_WINDOW(dialog), FALSE);
+	gtk_window_set_keep_above (GTK_WINDOW(dialog), TRUE);
+
 }
 
 void warn_dialog(char *msg)
 {
-	GtkWidget *dialog = gtk_message_dialog_new(NULL,
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(g_window),
 		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 		GTK_MESSAGE_WARNING, GTK_BUTTONS_CLOSE, "%s", msg);
 	configure_dialog(dialog);
@@ -50,7 +53,7 @@ void warn_dialog(char *msg)
 
 void info_dialog(char *msg)
 {
-	GtkWidget *dialog = gtk_message_dialog_new(NULL,
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(g_window),
 		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 		GTK_MESSAGE_INFO, GTK_BUTTONS_OK, "%s", msg);
 	configure_dialog(dialog);
@@ -60,7 +63,7 @@ void info_dialog(char *msg)
 
 gboolean confirm_dialog(char *msg)
 {
-	GtkWidget *dialog = gtk_message_dialog_new(NULL,
+	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(g_window),
 		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
 		GTK_MESSAGE_QUESTION, GTK_BUTTONS_OK_CANCEL, "%s", msg);
 	configure_dialog(dialog);
