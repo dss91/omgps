@@ -19,7 +19,7 @@
 static GtkWidget *nav_da, *heading_da;
 static GtkWidget *poll_engine_image, *track_image;
 
-#define INVALID_HASH	0xFFFF
+#define INVALID_HASH	0xFFFFFFFF
 
 #define OUTER_WIDTH		4
 #define INTER_WIDTH		2
@@ -361,7 +361,7 @@ void poll_update_ui()
 		} else if (g_context.speed_unit == SPEED_UNIT_MPH) {
 			speed_2d *= MPS_TO_MPH;
 		}
-		da_data->hash = (U4)((int)(speed_2d * 10));
+		da_data->hash = (U4)((int)(speed_2d * 10)) << 8 | (U1)g_context.speed_unit;
 		sprintf(da_data->text, "%6.1f%c", speed_2d, speed_unit_sign);
 	} else {
 		da_data->hash = INVALID_HASH;
