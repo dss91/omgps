@@ -237,6 +237,9 @@ void map_redraw_view_gps_running()
 
 static void draw_labels(nav_da_data_t *da_data)
 {
+	if (! GTK_WIDGET_VISIBLE(nav_da))
+		return;
+
 	int i, w, h, offset = da_data->offset;
 	XPM_ID_T id;
 	char c;
@@ -307,9 +310,6 @@ static void draw_labels(nav_da_data_t *da_data)
 
 static gboolean nav_da_expose_event (GtkWidget *widget, GdkEventExpose *evt, gpointer data)
 {
-	if (! GTK_WIDGET_VISIBLE(nav_da))
-		return FALSE;
-
 	int i;
 	for (i=0; i<3; i++) {
 		nav_da_data[i].hash = 0;
