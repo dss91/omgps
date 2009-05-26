@@ -13,7 +13,7 @@ static GtkWidget *notebook;
 static TAB_ID_T menu_ids[MENU_COUNT] = {
 	TAB_ID_AGPS, TAB_ID_NAV_DATA, TAB_ID_TRACK, TAB_ID_SCRATCH, TAB_ID_MAP_TILE, TAB_ID_SOUND
 };
-static GtkWidget * menu_buttons[MENU_COUNT];
+static GtkWidget *menu_buttons[MENU_COUNT];
 
 #define BUTTON_LABEL(bt) \
 	gtk_bin_get_child(GTK_BIN(&((GtkButton *)bt)->bin))
@@ -72,9 +72,13 @@ static void menu_item_button_clicked(GtkWidget *widget, gpointer data)
 
 static void poll_button_clicked(GtkWidget *widget, gpointer data)
 {
+	gboolean start = g_context.poll_state == POLL_STATE_SUSPENDING;
+	if (! start && !confirm_dialog("Stop GPS?"))
+		return;
+
 	gtk_widget_set_sensitive(poll_button, FALSE);
 
-	if (g_context.poll_state == POLL_STATE_SUSPENDING) {
+	if (start) {
 		map_set_status("<span color='red'>GPS is connecting...</span>", TRUE);
 		switch_to_tab(TAB_ID_MAIN_VIEW);
 	} else {
@@ -116,7 +120,7 @@ GtkWidget * menu_tab_create()
 	/* Other menu buttons */
 
 	GtkWidget *table = gtk_table_new((int)ceil(TAB_ID_MAX / 2.0), 2, TRUE);
-	gtk_table_set_row_spacings(GTK_TABLE(table), 10);
+	gtk_table_set_row_spacings(GTK_TABLE(table), 15);
 	gtk_table_set_col_spacings(GTK_TABLE(table), 10);
 
 	menu_item_t *menu;
