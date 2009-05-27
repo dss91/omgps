@@ -138,7 +138,7 @@ gboolean gps_device_power_on()
 	}
 
 	LOCK_UI();
-	map_set_status("Power on GPS...", FALSE);
+	status_label_set_text("Power on GPS...", FALSE);
 	UNLOCK_UI();
 
 	sysfs_set_gps_device_power(TRUE);
@@ -274,7 +274,7 @@ static void show_status(char *msg)
 {
 	log_info(msg);
 	LOCK_UI();
-	map_set_status(msg, FALSE);
+	status_label_set_text(msg, FALSE);
 	UNLOCK_UI();
 }
 

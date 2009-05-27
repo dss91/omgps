@@ -422,8 +422,8 @@ static int write_fd(int fd, char *buf, int buf_len)
 
 /**
  * @ref: http://www.w3.org/Protocols/rfc2616/rfc2616.html
- * NOTE: just a simple implementaton for downloading images
- * don't support (1) HTTPS (2) FTP etc
+ * NOTE: just a simple implementation for downloading images
+ * don't support (1) HTTPS (2) FTP (3) proxy
  */
 void http_get(char *url, int fd, int con_timeout, int timeout, http_get_result_t *result)
 {

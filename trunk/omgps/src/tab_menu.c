@@ -79,10 +79,10 @@ static void poll_button_clicked(GtkWidget *widget, gpointer data)
 	gtk_widget_set_sensitive(poll_button, FALSE);
 
 	if (start) {
-		map_set_status("<span color='red'>GPS is connecting...</span>", TRUE);
+		status_label_set_text("<span color='red'>GPS is connecting...</span>", TRUE);
 		switch_to_tab(TAB_ID_MAIN_VIEW);
 	} else {
-		map_set_status("<span color='red'>GPS is disconnecting...</span>", TRUE);
+		status_label_set_text("<span color='red'>GPS is disconnecting...</span>", TRUE);
 	}
 
 	notify_poll_thread_suspend_resume();
@@ -163,7 +163,7 @@ static gboolean page_link_clicked(GtkWidget *widget, GdkEventButton *event, gpoi
 		TAB_ID_T id = (TAB_ID_T)data;
 		switch_to_tab(id);
 	}
-	return TRUE;
+	return FALSE;
 }
 
 static void init_panes()

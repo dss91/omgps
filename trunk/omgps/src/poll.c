@@ -167,13 +167,13 @@ static gboolean init_ogpsd_service()
 {
 	gboolean ok = FALSE;
 	LOCK_UI();
-	map_set_status("Connect FSO GPS dbus service...", FALSE);
+	status_label_set_text("Connect FSO GPS dbus service...", FALSE);
 	UNLOCK_UI();
 
 	ok = fso_gypsy_init(&gdo, &lock);
 
 	LOCK_UI();
-	map_set_status(ok? "Connect FSO GPS dbus service: ok" :
+	status_label_set_text(ok? "Connect FSO GPS dbus service: ok" :
 		"Connect FSO GPS dbus service: failed", FALSE);
 	UNLOCK_UI();
 	return ok;
@@ -242,7 +242,7 @@ RUN:
 			if (! fso_gypsy_is_running())
 				goto UBX;
 			LOCK_UI();
-			map_set_status("Can't set data provider as FSO ogpsd", FALSE);
+			status_label_set_text("Can't set data provider as FSO ogpsd", FALSE);
 			UNLOCK_UI();
 			goto SUSPEND;
 		} else {
@@ -361,11 +361,11 @@ static void switch_to_ogpsd()
 
 		LOCK_UI();
 		menu_tab_on_show();
-		map_set_status("USART conflict, switched to ogpsd.", FALSE);
+		status_label_set_text("USART conflict, switched to ogpsd.", FALSE);
 		UNLOCK_UI();
 	} else {
 		LOCK_UI();
-		map_set_status("USART conflict, can't switch to ogpsd", FALSE);
+		status_label_set_text("USART conflict, can't switch to ogpsd", FALSE);
 		UNLOCK_UI();
 		ask_suspend = TRUE;
 	}

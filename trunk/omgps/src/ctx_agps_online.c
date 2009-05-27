@@ -190,7 +190,7 @@ void set_initial_aid_data()
 
 	char *msg = "Set local cached AID data...";
 	log_info(msg);
-	map_set_status(msg, FALSE);
+	status_label_set_text(msg, FALSE);
 
 	if (! set_aid_ini())
 		goto END;
@@ -211,7 +211,7 @@ END:
 
 	msg = ret ? "Cached AID data was submitted." : "Initial AID data is invalid, skip.";
 	log_info(msg);
-	map_set_status(msg, FALSE);
+	status_label_set_text(msg, FALSE);
 }
 
 static gboolean dump_aid_data(aid_args_t *args)
@@ -274,7 +274,7 @@ END:
 		unlink(tmp);
 		return FALSE;
 	} else {
-		log_info("AID-%s: %d messages", args->name, counter);
+		log_info("AID-%s: %d message(s)", args->name, counter);
 		return (rename(tmp, args->file) == 0);
 	}
 }
@@ -352,7 +352,7 @@ static void agps_online_close()
 static void lockview_button_toggled(GtkWidget *widget, gpointer data)
 {
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lockview_button))) {
-		map_set_status("Click your location on map, then press\"submit\" button", FALSE);
+		status_label_set_text("Click your location on map, then press\"submit\" button", FALSE);
 		map_config_main_view(&mouse_agpsonline_handler, 0x2|0x4|0x8, TRUE, TRUE);
 		map_set_redraw_func(&agps_redraw_view);
 	} else {
@@ -370,7 +370,7 @@ static void lockview_button_toggled(GtkWidget *widget, gpointer data)
 static void submit_button_clicked(GtkWidget *widget, gpointer data)
 {
 	if (g_gpsdata.latlon_valid) {
-		map_set_status("GPS data is valid, skip.", FALSE);
+		status_label_set_text("GPS data is valid, skip.", FALSE);
 	} else {
 		pthread_t tid;
 		if (pthread_create(&tid, NULL, agps_online_routine, NULL) != 0) {
@@ -413,7 +413,7 @@ static inline void show_lat_lon(point_t point)
 	coord_t wgs84 = tilepixel_to_wgs84(point, g_view.fglayer.repo->zoom, g_view.fglayer.repo);
 	char buf[32];
 	snprintf(buf, sizeof(buf), "lat=%lf, lon=%lf", wgs84.lat, wgs84.lon);
-	map_set_status(buf, FALSE);
+	status_label_set_text(buf, FALSE);
 }
 
 static void mouse_released(point_t point, guint time)
@@ -549,7 +549,7 @@ static int agps_get_aid_data(char *buf, int buf_len, int *rtt, int *data_len)
 		goto END;
 
 	LOCK_UI();
-	map_set_status("AGPS online: connecting...", FALSE);
+	status_label_set_text("AGPS online: connecting...", FALSE);
 	UNLOCK_UI();
 
 	sock_fd = connect_remote_with_timeouts(AGPS_SERVER, AGPS_PORT, AF_UNSPEC, SOCK_STREAM, 0,
@@ -561,7 +561,7 @@ static int agps_get_aid_data(char *buf, int buf_len, int *rtt, int *data_len)
 	}
 
 	LOCK_UI();
-	map_set_status("AGPS online: sending request data...", FALSE);
+	status_label_set_text("AGPS online: sending request data...", FALSE);
 	UNLOCK_UI();
 
 	struct timeval start_time, end_time;
@@ -579,7 +579,7 @@ static int agps_get_aid_data(char *buf, int buf_len, int *rtt, int *data_len)
 	memset(buf, 0, buf_len);
 
 	LOCK_UI();
-	map_set_status("AGPS online: reading response data...", FALSE);
+	status_label_set_text("AGPS online: reading response data...", FALSE);
 	UNLOCK_UI();
 
 	for (len = 0; (n = read(sock_fd, (buf + len), buf_len - len)) != 0; len += n) {
@@ -615,7 +615,7 @@ END:
 static gboolean agps_online_cmd(void *_args)
 {
 	LOCK_UI();
-	map_set_status("writing GPS receiver...", FALSE);
+	status_label_set_text("writing GPS receiver...", FALSE);
 	UNLOCK_UI();
 
 	str_t *args = (str_t*) _args;
@@ -629,7 +629,7 @@ static gboolean agps_online_cmd(void *_args)
 	if (! is_ubx) {
 		if ((gps_dev_fd = usart_open((U4)BAUD_RATE, FALSE)) <= 0) {
 			LOCK_UI();
-			map_set_status("AGPS online: Open USART failed", FALSE);
+			status_label_set_text("AGPS online: Open USART failed", FALSE);
 			UNLOCK_UI();
 			ret = FALSE;
 			goto END;
@@ -647,14 +647,14 @@ static gboolean agps_online_cmd(void *_args)
 		if (is_ubx) {
 			/* better to dump :) */
 			LOCK_UI();
-			map_set_status("Dump AID data as local cache...", FALSE);
+			status_label_set_text("Dump AID data as local cache...", FALSE);
 			UNLOCK_UI();
 			sleep(1);
 			agps_dump_aid_data(TRUE);
 		}
 	} else {
 		LOCK_UI();
-		map_set_status("AGPS online: write data to device failed.", FALSE);
+		status_label_set_text("AGPS online: write data to device failed.", FALSE);
 		UNLOCK_UI();
 		ret = FALSE;
 	}
@@ -670,7 +670,7 @@ END:
 	LOCK_UI();
 	if (ret) {
 		agps_online_close();
-		map_set_status("AGPS online: synchronized.", FALSE);
+		status_label_set_text("AGPS online: synchronized.", FALSE);
 	} else {
 		ctx_tab_agps_online_on_show();
 	}
@@ -687,7 +687,7 @@ static void * agps_online_routine(void *args)
 
 	if (! guess_network_is_connecting()) {
 		LOCK_UI();
-		map_set_status("AGPS online: no network connection?", FALSE);
+		status_label_set_text("AGPS online: no network connection?", FALSE);
 		UNLOCK_UI();
 	}
 
@@ -711,7 +711,7 @@ static void * agps_online_routine(void *args)
 	char msg[64];
 	sprintf(msg, PREFIX"received %d bytes.", data_len);
 	LOCK_UI();
-	map_set_status(msg, FALSE);
+	status_label_set_text(msg, FALSE);
 	UNLOCK_UI();
 	log_info(msg);
 

@@ -459,10 +459,10 @@ static void init(gboolean log2console)
 	if (! check_device_files())
 		exit(0);
 
-	map_set_status("Connecting to dbus...", FALSE);
+	status_label_set_text("Connecting to dbus...", FALSE);
 
 	if (! dbus_init())
-		map_set_status("<span color='red'>Connect to dbus failed</span>", TRUE);
+		status_label_set_text("<span color='red'>Connect to dbus failed</span>", TRUE);
 
 	/* "OS auto suspend" is disabled while GPS is running */
 	g_context.suspend_disabled = dbus_request_resource("CPU");
