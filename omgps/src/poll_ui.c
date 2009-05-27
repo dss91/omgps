@@ -37,6 +37,8 @@ static int last_heading = -1;
 static int lastx = 0, lasty = 0;
 static char speed_unit_sign;
 
+static point_t cursor_range_tl, cursor_range_br;
+
 typedef struct __nav_da_data_t
 {
 	char text[8];
@@ -390,12 +392,15 @@ void poll_update_ui()
 		draw_labels(da_data);
 	}
 
-	gboolean out_of_view = g_view.pos_offset.x < g_view.fglayer.visible.x ||
-		g_view.pos_offset.y < g_view.fglayer.visible.y ||
-		g_view.pos_offset.x >= g_view.fglayer.visible.x + g_view.fglayer.visible.width ||
-		g_view.pos_offset.y >= g_view.fglayer.visible.x + g_view.fglayer.visible.height;
+	/* draw */
 
-	if (g_context.cursor_in_view && out_of_view) {
+	gboolean out_of_range =
+		g_view.pos_offset.x < cursor_range_tl.x ||
+		g_view.pos_offset.y < cursor_range_tl.y ||
+		g_view.pos_offset.x > cursor_range_br.x ||
+		g_view.pos_offset.y > cursor_range_br.y;
+
+	if (g_context.cursor_in_view && out_of_range) {
 		map_centralize();
 	} else if (offset_sensitive) {
 		increment_draw();
@@ -411,11 +416,21 @@ void ctx_tab_gps_fix_on_show()
 {
 	last_rect_valid = FALSE;
 
+	status_label_set_text("", FALSE);
 	if (POLL_STATE_TEST(RUNNING)) {
 		map_set_redraw_func(&map_redraw_view_gps_running);
 	} else {
 		map_set_redraw_func(NULL);
 	}
+}
+
+/* To avoid unnecessay calculations, we cache the cursor range on each FG layer update */
+void poll_ui_on_view_range_changed()
+{
+	cursor_range_tl.x = g_view.fglayer.visible.width >> 2;
+	cursor_range_tl.y = g_view.fglayer.visible.height >> 2;
+	cursor_range_br.x = g_view.fglayer.visible.x + g_view.fglayer.visible.width - cursor_range_tl.x;
+	cursor_range_br.y = g_view.fglayer.visible.x + g_view.fglayer.visible.width - cursor_range_tl.y;
 }
 
 void poll_ui_on_speed_unit_changed()
