@@ -16,7 +16,7 @@
 static GtkWidget *user_entry, *pwd_entry, *pwd_entry_again;
 static GtkWidget *save_account_button, *reset_account_button;
 static GtkWidget *online_button, *reset_button;
-static char *reset_type = "warm";
+static char *reset_type = "hot";
 
 static void online_button_clicked(GtkWidget *widget, gpointer data)
 {
