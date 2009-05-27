@@ -7,7 +7,7 @@
 
 /**
  * NOTE: the policy is: when this program detect conflict (gypsy is running), it
- * switches engine to gypsy. Else built in UBX binary is used.
+ * switches engine to gypsy. Else built-in UBX binary is used.
  */
 static DBusGConnection *connection = NULL;
 
@@ -597,12 +597,7 @@ static gboolean dbus_get_connection()
 }
 
 /**
- * Help unlock screen when we are simulating screen lock
- * "charging"
- * "discharging"
- * "full"
- * "empty"
- * "critical"
+ * for reporting "low power" event by sound
  */
 static void power_status_changed(DBusGProxy *proxy, const gchar *status, gpointer user_data)
 {

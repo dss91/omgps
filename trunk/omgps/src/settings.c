@@ -50,7 +50,6 @@ static char *settings_file = NULL;
 
 /**
  * NOTE: most of the checks are just hacks.
- * return constant error string or NULL if no error.
  */
 static gboolean check_settings()
 {
