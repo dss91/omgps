@@ -246,5 +246,6 @@ extern void ctx_gpsfix_on_poll_state_changed();
 extern void ctx_gpsfix_on_track_state_changed();
 
 extern void update_ui_on_poll_state_changed();
+extern void poll_ui_on_view_range_changed();
 
 #endif /* GPS_H_ */

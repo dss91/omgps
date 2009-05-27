@@ -7,6 +7,7 @@
 #include "network.h"
 #include "customized.h"
 #include "track.h"
+#include "gps.h"
 
 static GtkWidget *drawingarea;
 static GtkWidget *menu_button, *center_button, *zoomin_button, *zoomout_button, *fullscreen_button;
@@ -16,7 +17,6 @@ static PangoLayout *tile_info_text_layout = NULL;
 static mouse_handler_t mouse_handler;
 static point_t clicked_point = {-1, -1};;
 static guint clicked_time;
-static gboolean rightclicked = FALSE;
 
 static pthread_mutex_t change_zoom_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t change_zoom_cond = PTHREAD_COND_INITIALIZER;
@@ -498,6 +498,8 @@ void map_invalidate_view(gboolean redraw)
 {
 	if (map_update_view_range(&g_view.fglayer)) {
 		map_invalidate_pixbuf(NULL, TRUE, TRUE, g_context.dl_if_absent);
+		/* For "keep cursor in view" */
+		poll_ui_on_view_range_changed();
 	} else {
 		gdk_draw_rectangle (drawingarea->window, g_context.drawingarea_bggc,
 			TRUE, 0, 0, g_view.width, g_view.height);
@@ -634,9 +636,6 @@ static gboolean drawing_area_configure_event (GtkWidget *widget, GdkEventConfigu
 	return FALSE;
 }
 
-/**
- * http://ometer.com/gtk-colors.html
- */
 static gboolean drawing_area_expose_event (GtkWidget *widget, GdkEventExpose *evt, gpointer data)
 {
 	if (g_view.invalidate) {
@@ -717,7 +716,7 @@ static void map_init_zoom()
 		gtk_widget_set_sensitive(zoomout_button, FALSE);
 }
 
-void map_set_status(char *status, gboolean is_markup)
+void status_label_set_text(char *status, gboolean is_markup)
 {
 	if(! GTK_WIDGET_VISIBLE(status_label))
 		gtk_widget_show(status_label);
@@ -771,16 +770,14 @@ static void mouse_pressed(point_t point, guint time)
 	clicked_time = time;
 }
 
-static inline void draw_cross()
+static inline void draw_cross(point_t point)
 {
-	if (clicked_point.x == -1)
-		return;
 	const int r = 15;
 
 	gdk_draw_line(drawingarea->window, g_context.crosssign_gc,
-		clicked_point.x - r, clicked_point.y, clicked_point.x + r, clicked_point.y);
+		point.x - r, point.y, point.x + r, point.y);
 	gdk_draw_line(drawingarea->window, g_context.crosssign_gc,
-		clicked_point.x, clicked_point.y - r, clicked_point.x, clicked_point.y + r);
+		point.x, point.y - r, point.x, point.y + r);
 }
 
 static inline void show_lat_lon(point_t point)
@@ -790,68 +787,40 @@ static inline void show_lat_lon(point_t point)
 	coord_t wgs84 = tilepixel_to_wgs84(point, g_view.fglayer.repo->zoom, g_view.fglayer.repo);
 
 	char buf[128];
-	snprintf(buf, sizeof(buf), "Clicked on: <span color='red'>lat=%lf, lon=%lf</span>",
+	snprintf(buf, sizeof(buf), "Clicked on: lat=%lf, lon=%lf",
 		wgs84.lat, wgs84.lon);
-	map_set_status(buf, TRUE);
-}
-
-static inline void map_right_clicked(point_t point)
-{
-	draw_cross();
-	clicked_point = point;
-	draw_cross();
-
-	show_lat_lon(point);
-}
-
-/* Most of the time, it is not easy to click and hold on a point.
- * Thus we can detect this as "right click" event and show location data.
- * Draw to drawing area is a bad idea -- if we don't freeze the view,
- * data get overlap with each other... and we have to invalidate drawing area. */
-static void mouse_motion(point_t point, guint time)
-{
-	if (rightclicked) {
-		map_right_clicked(point);
-		return;
-	}
-
-	int offset_x = point.x - clicked_point.x;
-	int offset_y = point.y - clicked_point.y;
-	int dist = sqrt(offset_x * offset_x + offset_y * offset_y);
-
-	if (dist < 10 && (time - clicked_time >= 2000)) {
-		g_context.map_view_frozen = TRUE;
-		map_right_clicked(point);
-		rightclicked = TRUE;
-	}
+	status_label_set_text(buf, TRUE);
 }
 
 static void mouse_released(point_t point, guint time)
 {
-	if (rightclicked) {
-		g_context.map_view_frozen = FALSE;
-		rightclicked = FALSE;
-		draw_cross();
-		show_lat_lon(point);
-		clicked_point.x = clicked_point.y = -1;
-		return;
-	}
-
 	if (clicked_point.x == -1)
 		return;
 
-	point.x -= clicked_point.x;
-	point.y -= clicked_point.y;
-	int dist = sqrt(point.x * point.x + point.y * point.y);
+	int diff_x = point.x - clicked_point.x;
+	int diff_y = point.y - clicked_point.y;
+	int dist = sqrt(diff_x * diff_x + diff_y * diff_y);
 
 	clicked_point.x = clicked_point.y = -1;
 
-	if (dist <= 30)
+	time -= clicked_time;
+	if (time < 200 || time > 3000)
 		return;
 
+	if (dist <= 10) {
+		draw_cross(point);
+		show_lat_lon(point);
+		gdk_flush();
+		sleep_ms(500);
+		draw_cross(point);
+		return;
+	} else if (dist <= 30) {
+		return;
+	}
+
 	/* When pan to map edge, avoid displaying blank map */
-	int center_x = g_view.fglayer.center_pixel.x - point.x;
-	int center_y = g_view.fglayer.center_pixel.y - point.y;
+	int center_x = g_view.fglayer.center_pixel.x - diff_x;
+	int center_y = g_view.fglayer.center_pixel.y - diff_y;
 
 	/* get view and tiles in tile pixel coordinate */
 	int view_tl_pixel_x = center_x - (g_view.width >> 1);
@@ -882,7 +851,7 @@ static void setup_drawingarea_mouse_handlers()
 {
 	mouse_handler.press_handler = mouse_pressed;
 	mouse_handler.release_handler = mouse_released;
-	mouse_handler.motion_handler = mouse_motion;
+	mouse_handler.motion_handler = NULL;
 
 	drawingarea_set_default_mouse_handler(&mouse_handler);
 }
@@ -931,16 +900,25 @@ static void menu_button_clicked(GtkWidget *widget, gpointer data)
 
 void view_tab_on_show()
 {
-	if (g_context.poll_state == POLL_STATE_SUSPENDING) {
-		map_set_status("<span color='red'>GPS is disconnected</span>", TRUE);
-	} else {
-		map_set_status("<span color='red'>GPS is running</span>", TRUE);
-	}
-
 	int ctx_num = ctx_tab_get_current_id();
 	(g_ctx_panes[ctx_num].on_show)();
 
 	poll_update_ui();
+}
+
+static GtkWidget * new_toolbar_button(GtkWidget *box, char *label)
+{
+	GtkWidget *button = gtk_button_new_with_label(label);
+	gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_HALF);
+	gtk_button_set_focus_on_click(GTK_BUTTON(button), FALSE);
+	gtk_container_add (GTK_CONTAINER (box), button);
+	return button;
+}
+
+gboolean status_label_clicked(GtkWidget *widget, GdkEventButton *event, gpointer data)
+{
+	status_label_set_text("", FALSE);
+	return FALSE;
 }
 
 GtkWidget * view_tab_create()
@@ -957,15 +935,11 @@ GtkWidget * view_tab_create()
 
 	GtkWidget *topbox = gtk_hbox_new(TRUE, 2);
 
-	menu_button = gtk_button_new_with_label("Menu");
-	gtk_button_set_relief(GTK_BUTTON(menu_button), GTK_RELIEF_HALF);
-	gtk_container_add (GTK_CONTAINER (topbox), menu_button);
+	menu_button = new_toolbar_button(topbox, "Menu");
 	g_signal_connect (G_OBJECT (menu_button), "clicked",
 		G_CALLBACK (menu_button_clicked), NULL);
 
-	zoomin_button = gtk_button_new_with_label("+");
-	gtk_button_set_relief(GTK_BUTTON(zoomin_button), GTK_RELIEF_HALF);
-	gtk_container_add (GTK_CONTAINER (topbox), zoomin_button);
+	zoomin_button = new_toolbar_button(topbox, "+");
 	g_signal_connect (G_OBJECT (zoomin_button), "pressed",
 		G_CALLBACK (zoom_button_pressed), (gpointer)TRUE);
 	g_signal_connect (G_OBJECT (zoomin_button), "released",
@@ -974,30 +948,22 @@ GtkWidget * view_tab_create()
 	zoom_label = gtk_label_new("");
 	gtk_container_add (GTK_CONTAINER (topbox), zoom_label);
 
-	zoomout_button = gtk_button_new_with_label("-");
-	gtk_button_set_relief(GTK_BUTTON(zoomout_button), GTK_RELIEF_HALF);
-	gtk_container_add (GTK_CONTAINER (topbox), zoomout_button);
+	zoomout_button = new_toolbar_button(topbox, "-");
 	g_signal_connect (G_OBJECT (zoomout_button), "pressed",
 		G_CALLBACK (zoom_button_pressed), (gpointer)FALSE);
 	g_signal_connect (G_OBJECT (zoomout_button), "released",
 		G_CALLBACK (zoom_button_released), NULL);
 
-	center_button = gtk_button_new_with_label("Center");
-	gtk_button_set_relief(GTK_BUTTON(center_button), GTK_RELIEF_HALF);
-	gtk_container_add (GTK_CONTAINER (topbox), center_button);
+	center_button = new_toolbar_button(topbox, "Center");
 	g_signal_connect (G_OBJECT (center_button), "clicked",
 		G_CALLBACK (center_button_clicked), NULL);
 	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Gray], TRUE);
 
-	fullscreen_button = gtk_button_new_with_label("Full");
-	gtk_button_set_relief(GTK_BUTTON(fullscreen_button), GTK_RELIEF_HALF);
-	gtk_container_add (GTK_CONTAINER (topbox), fullscreen_button);
+	fullscreen_button = new_toolbar_button(topbox, "Full");
 	g_signal_connect (G_OBJECT (fullscreen_button), "clicked",
 		G_CALLBACK (fullscreen_button_clicked), NULL);
 
-	GtkWidget *exit_button = gtk_button_new_with_label("Exit");
-	gtk_button_set_relief(GTK_BUTTON(exit_button), GTK_RELIEF_HALF);
-	gtk_container_add (GTK_CONTAINER (topbox), exit_button);
+	GtkWidget *exit_button = new_toolbar_button(topbox, "Exit");
 	g_signal_connect (G_OBJECT (exit_button), "clicked",
 		G_CALLBACK (exit_button_clicked), NULL);
 
@@ -1008,7 +974,14 @@ GtkWidget * view_tab_create()
 	gtk_label_set_justify(GTK_LABEL(status_label), GTK_JUSTIFY_LEFT);
 	gtk_label_set_use_markup(GTK_LABEL(status_label), TRUE);
 
-	gtk_container_add (GTK_CONTAINER (bot_vbox), status_label);
+	GtkWidget *event_box = gtk_event_box_new();
+	gtk_container_add(GTK_CONTAINER (event_box), status_label);
+	gtk_event_box_set_above_child(GTK_EVENT_BOX (event_box), TRUE);
+	gtk_container_add (GTK_CONTAINER (bot_vbox), event_box);
+
+	gtk_widget_set_events(event_box, GDK_BUTTON_PRESS_MASK);
+	g_signal_connect (G_OBJECT (event_box), "button_release_event",
+		G_CALLBACK (status_label_clicked), NULL);
 
 	GtkWidget *ctx_vbox = gtk_vbox_new(FALSE, 0);
 

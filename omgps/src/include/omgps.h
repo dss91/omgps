@@ -307,7 +307,7 @@ extern void map_invalidate_view(gboolean redraw);
 extern void map_centralize();
 extern void map_redraw_background_map();
 extern void map_redraw_view();
-extern void map_set_status(char *status_text, gboolean is_markup);
+extern void status_label_set_text(char *status_text, gboolean is_markup);
 extern void map_config_main_view(mouse_handler_t *mouse_handler, int flag,
 	gboolean disable_buttons, gboolean frozen);
 extern void map_toggle_menu_button(gboolean eanable);
