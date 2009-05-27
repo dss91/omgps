@@ -49,7 +49,7 @@ void tilecache_cleanup(tilecache_t *cache, gboolean free_cache)
 	if (! cache)
 		return;
 
-	pthread_mutex_lock(&cache->lock);
+	LOCK_MUTEX(&cache->lock);
 
 	tilecache_slot_t *slot = cache->head, *next;
 	while(slot) {
@@ -61,7 +61,7 @@ void tilecache_cleanup(tilecache_t *cache, gboolean free_cache)
 	cache->head = cache->tail = NULL;
 	cache->count = 0;
 
-	pthread_mutex_unlock(&cache->lock);
+	UNLOCK_MUTEX(&cache->lock);
 
 	if (free_cache) {
 		pthread_mutex_destroy(&(cache->lock));
@@ -71,7 +71,7 @@ void tilecache_cleanup(tilecache_t *cache, gboolean free_cache)
 
 tile_t* tilecache_get(tilecache_t *cache, int zoom, int x, int y)
 {
-	pthread_mutex_lock(&cache->lock);
+	LOCK_MUTEX(&cache->lock);
 
 	tilecache_slot_t *slot = cache->head;
 	tile_t *tile = NULL;
@@ -86,7 +86,7 @@ tile_t* tilecache_get(tilecache_t *cache, int zoom, int x, int y)
 		}
 	}
 
-	pthread_mutex_unlock(&cache->lock);
+	UNLOCK_MUTEX(&cache->lock);
 
 	if (found)
 		return tile;
@@ -98,7 +98,7 @@ gboolean tilecache_add(tilecache_t *cache, tile_t *tile)
 {
 	assert(tile && tile->pixbuf);
 
-	pthread_mutex_lock(&cache->lock);
+	LOCK_MUTEX(&cache->lock);
 
 	tilecache_slot_t *slot = NULL;
 
@@ -131,7 +131,7 @@ gboolean tilecache_add(tilecache_t *cache, tile_t *tile)
 		++cache->count;
 	}
 
-	pthread_mutex_unlock(&cache->lock);
+	UNLOCK_MUTEX(&cache->lock);
 
 	return (slot != NULL);
 }

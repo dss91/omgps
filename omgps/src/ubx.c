@@ -173,7 +173,7 @@ gboolean ubx_issue_cmd(U1 *packet, int len)
  * send_reate: 0x00 means disabled.
  *
  * NOTE: on FR GTA02 v6, the I/O target numbers are 1. (0, 1, 2, 3)
- * Although u-blox firmware 5.00 6 document says 6 ports, but ANTARIS 0635 has only 4.
+ * Although u-blox firmware 5.00 doc says 6 ports, but ANTARIS 0635 has only 4.
  */
 gboolean ubx_cfg_msg_nmea_std(U1 send_rate, gboolean all, gboolean readack)
 {
@@ -493,8 +493,8 @@ static gboolean ubx_parse_nav_svinfo(ubx_msg_t *msg)
  *
  * From http://www.u-blox.cn/customersupport/gps.g5/ublox5_Fw5.00_Release_Notes(GPS.G5-SW-08019).pdf:
  *
- * UBX-AID-EPH and UBX-AID-ALM Messages for Satellite without llh_valid Orbits
- * When polling UBX-AID-EPH or UBX-AID-ALM messages, satellites without llh_valid ephemeris or almanac data will
+ * UBX-AID-EPH and UBX-AID-ALM Messages for Satellite without valid Orbits
+ * When polling UBX-AID-EPH or UBX-AID-ALM messages, satellites without valid ephemeris or almanac data will
  * return a complete UBX-AID-EPH or UBX-AID-ALM message with all data words set to zero. This doesn’t comply
  * with the protocol specification. Furthermore, u-blox 5 receivers with firmware V5.00 and
  * earlier can run into a floating-point exception when fed with such “empty” ephemeris.
@@ -724,12 +724,6 @@ static gboolean ubx_read_and_parse_response(ubx_msg_t *msg, ubx_msg_type_t *type
  * Return:
  * 		TRUE: ALL ok, may be invalid
  * 		FALSE: part or all failed: I/O error
- *
- * Not thread-safe.
- * To get better performance, we should avoid concurrent polling
- *
- * NOTE: UBX binary batch poll_suspending is REALLY error-prone!
- * Avoid this mode unless we know the underlying mechanism better!
  */
 gboolean ubx_poll_group(gboolean pollsv)
 {
@@ -759,4 +753,3 @@ gboolean ubx_poll_group(gboolean pollsv)
 
 	return ! has_failure;
 }
-

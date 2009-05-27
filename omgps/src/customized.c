@@ -24,8 +24,7 @@ GtkWidget* hyperlink_label_new(char *text, PangoFontDescription *font_desc,
 	gtk_event_box_set_above_child(GTK_EVENT_BOX (event_box), TRUE);
 
 	gtk_widget_set_events(event_box, GDK_BUTTON_PRESS_MASK);
-	g_signal_connect (G_OBJECT (event_box), "button_release_event",
-			G_CALLBACK (on_click), data);
+	g_signal_connect (G_OBJECT (event_box), "button_release_event",	G_CALLBACK (on_click), data);
 
 	return event_box;
 }
