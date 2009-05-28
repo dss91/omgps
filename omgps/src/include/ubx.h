@@ -29,6 +29,7 @@
 #define UBX_ID_CFG_RATE		0x08
 #define UBX_ID_CFG_SBAS		0x16
 #define UBX_ID_CFG_RXM		0x11
+#define UBX_ID_CFG_NAV2		0x1A
 
 #define UBX_ID_AID_INI		0x01
 #define UBX_ID_AID_HUI		0x02
@@ -54,6 +55,7 @@ typedef struct __ubx_msg_t
 } ubx_msg_t;
 
 extern void 	ubx_mon_ver_poll();
+
 extern void		ubx_checksum(U1 *packet, int size);
 extern gboolean ubx_issue_cmd(U1 *packet, int len);
 extern gboolean ubx_read_next_msg(ubx_msg_t *msg, const ubx_msg_type_t *expected_type);
@@ -64,10 +66,10 @@ extern gboolean ubx_cfg_rate(U2 update_rate, gboolean readack);
 extern gboolean ubx_cfg_msg_nmea_ubx(U1 send_rate, gboolean all, gboolean readack);
 extern gboolean ubx_cfg_msg_nmea_std(U1 send_rate, gboolean all, gboolean readack);
 extern gboolean ubx_cfg_msg(const ubx_msg_type_t *type, gboolean enabled, gboolean readack);
-extern gboolean ubx_cfg_rxm(U1 mode, gboolean readack);
+extern gboolean ubx_cfg_rxm(U1 gps_mode, U1 lp_mode, gboolean readack);
 extern gboolean ubx_cfg_sbas(gboolean enable, gboolean readack);
 extern gboolean ubx_cfg_rst(U2 bbr, U1 reset_type);
-//extern gboolean ubx_cfg_nav2(U1 maxsv, gboolean allow_alma_nav, gboolean readack);
+extern gboolean ubx_cfg_nav2(U1 model, gboolean readack);
 
 extern gboolean ubx_reset_gps(char *type);
 extern gboolean ubx_read_ack(const ubx_msg_type_t *expected_type);

@@ -85,3 +85,20 @@ void modify_button_color(GtkButton *button, GdkColor *color, gboolean is_fg)
 			gtk_widget_modify_bg(GTK_WIDGET(button), i, color);
 	}
 }
+
+GtkWidget *new_scrolled_window(GtkWidget *viewport_child)
+{
+	GtkWidget *sw = gtk_scrolled_window_new (NULL, NULL);
+	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (sw), GTK_SHADOW_NONE);
+	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (sw),
+			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
+	if (viewport_child != NULL) {
+		GtkWidget *viewport = gtk_viewport_new(NULL, NULL);
+		gtk_viewport_set_shadow_type(GTK_VIEWPORT (viewport), GTK_SHADOW_NONE);
+		gtk_container_add(GTK_CONTAINER(sw), viewport);
+		gtk_container_add(GTK_CONTAINER(viewport), viewport_child);
+	}
+
+	return sw;
+}

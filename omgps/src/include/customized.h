@@ -14,6 +14,7 @@ extern void warn_dialog(char *msg);
 extern void info_dialog(char *msg);
 extern gboolean confirm_dialog(char *msg);
 
-void modify_button_color(GtkButton *button, GdkColor *color, gboolean is_fg);
+extern void modify_button_color(GtkButton *button, GdkColor *color, gboolean is_fg);
+extern GtkWidget *new_scrolled_window(GtkWidget *viewport_child);
 
 #endif /* CUSTOMIZED_ */

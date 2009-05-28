@@ -89,7 +89,7 @@ static void draw_speed_heading(int heading)
 
 static gboolean heading_da_expose_event (GtkWidget *widget, GdkEventExpose *evt, gpointer data)
 {
-	if (! GTK_WIDGET_VISIBLE(heading_da))
+	if (! GTK_WIDGET_DRAWABLE(heading_da))
 		return TRUE;
 
 	gdk_draw_pixbuf (heading_da->window, g_context.drawingarea_bggc,
@@ -239,7 +239,7 @@ void map_redraw_view_gps_running()
 
 static void draw_labels(nav_da_data_t *da_data)
 {
-	if (! GTK_WIDGET_VISIBLE(nav_da))
+	if (! GTK_WIDGET_DRAWABLE(nav_da))
 		return;
 
 	int i, w, h, offset = da_data->offset;
@@ -463,8 +463,8 @@ void ctx_gpsfix_on_poll_state_changed()
 		break;
 	case POLL_STATE_SUSPENDING:
 		last_rect_valid = FALSE;
-		if (ctx_tab_get_current_id() == CTX_ID_NONE)
-			switch_to_main_view(CTX_ID_NONE);
+		//if (ctx_tab_get_current_id() == CTX_ID_NONE)
+		//	switch_to_main_view(CTX_ID_NONE);
 		break;
 	}
 

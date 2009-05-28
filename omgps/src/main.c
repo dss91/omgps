@@ -165,6 +165,8 @@ static void sig_handler(int signo)
 				(*cleanup_func)(ctx);
 			}
 		}
+		warn_dialog("program crashed, exit");
+		exit(0);
 	}
 
 	if (ctx && ctx->is_main_thread) {
@@ -392,7 +394,6 @@ static void init_g_context_vars()
 	/* enable when center button is clicked, disable when after being dragged */
 	g_context.run_gps_on_start = TRUE;
 	g_context.cursor_in_view = TRUE;
-	g_context.sbas_enable = TRUE;
 
 	g_context.speed_unit = SPEED_UNIT_KMPH;
 }

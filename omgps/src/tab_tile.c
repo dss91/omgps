@@ -299,10 +299,7 @@ static void create_maplist_treeview()
 	g_signal_connect (G_OBJECT(maplist_treeview), "cursor-changed",
 		G_CALLBACK (maplist_treeview_row_selected), NULL);
 
-	maplist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (maplist_treeview_sw), GTK_SHADOW_NONE);
-	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (maplist_treeview_sw),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	maplist_treeview_sw = new_scrolled_window (NULL);
 	gtk_container_add (GTK_CONTAINER (maplist_treeview_sw), maplist_treeview);
 
 	/* add columns to the tree view */

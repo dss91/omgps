@@ -380,11 +380,7 @@ GtkWidget * scratch_tab_create()
 	g_signal_connect (G_OBJECT(filelist_treeview), "cursor-changed",
 		G_CALLBACK (filelist_treeview_row_selected), NULL);
 
-	filelist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (filelist_treeview_sw), GTK_SHADOW_NONE);
-	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (filelist_treeview_sw),
-		GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
+	filelist_treeview_sw = new_scrolled_window (NULL);
 	gtk_container_add (GTK_CONTAINER (filelist_treeview_sw), filelist_treeview);
 
 	/* add columns to the tree view */
@@ -469,17 +465,9 @@ GtkWidget * scratch_tab_create()
 	screenshot_label = gtk_label_new("");
 	screenshot_image = gtk_image_new();
 	gtk_box_pack_start(GTK_BOX(image_box), screenshot_label, FALSE, FALSE, 0);
-	gtk_misc_set_alignment(GTK_MISC(screenshot_label), 0.0, 0.5);
+	//gtk_misc_set_alignment(GTK_MISC(screenshot_label), 0.0, 0.5);
 
-	GtkWidget *sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (sw), GTK_SHADOW_NONE);
-	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (sw),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-	GtkWidget *viewport = gtk_viewport_new(NULL, NULL);
-	gtk_viewport_set_shadow_type(GTK_VIEWPORT (viewport), GTK_SHADOW_NONE);
-	gtk_container_add(GTK_CONTAINER(sw), viewport);
-	gtk_container_add(GTK_CONTAINER(viewport), screenshot_image);
+	GtkWidget *sw = new_scrolled_window (screenshot_image);
 
 	/* stretch */
 	gtk_box_pack_start(GTK_BOX(image_box), sw, TRUE, TRUE, 0);

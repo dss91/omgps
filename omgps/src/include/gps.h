@@ -26,7 +26,7 @@ typedef unsigned long long	U8;
 /* up to months */
 #define ALM_VALID_DAYS				14
 
-#define DUMP_AID_INTERVAL_SECONDS	900
+#define DUMP_AID_INTERVAL_SECONDS	1800
 
 /* default PACC for CFG-AID-INI, kilometers. Hack! */
 #define AID_INI_PACC_KM				300
