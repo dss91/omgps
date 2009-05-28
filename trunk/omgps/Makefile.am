@@ -56,10 +56,10 @@ omgps_SOURCES =          \
   src/py_ext.c	         \
   src/settings.c         \
   src/sound.c            \
-  src/tab_agps.c         \
+  src/tab_gpscfg.c       \
   src/tab_menu.c         \
   src/tab_nav.c	         \
-  src/tab_scratch.c	     \
+  src/tab_scratch.c      \
   src/tab_sound.c        \
   src/tab_tile.c         \
   src/tab_track.c        \

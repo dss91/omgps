@@ -2,6 +2,7 @@
 #include "omgps.h"
 #include "gps.h"
 #include "xpm_image.h"
+#include "customized.h"
 
 static GtkWidget *ubx_svinfo_treeview, *ubx_svinfo_treeview_sw;
 static GtkListStore *ubx_svinfo_store = NULL;
@@ -17,14 +18,11 @@ static speed_unit_t speed_unit_values[3] = {SPEED_UNIT_KMPH, SPEED_UNIT_MPH, SPE
 
 static GtkWidget *time_label, *notebook, *skymap_da, *speed_2d_label, *vel_down_label;
 
-#define SKY_IMAGE_SIZE	450
-
-#define SKY_IMAGE_R		(SKY_IMAGE_SIZE >> 1)
 #define DEG_TO_RAD 		(M_PI / 180)
 
 #define CIRCLE_ARC		23040
 
-static int da_width, da_height;
+static int da_width, da_height, bg_image_d, bg_image_r;
 
 static U4 last_hash[SV_MAX_CHANNELS], hash[SV_MAX_CHANNELS];
 
@@ -82,7 +80,6 @@ static inline void update_nav_basic();
 
 static void draw_skymap_fg(GdkDrawable *canvas)
 {
-	#define SKY_IMAGE_R		(SKY_IMAGE_SIZE >> 1)
 	#define DEG_TO_RAD 		(M_PI / 180)
 	#define IMG_SIZE 		15
 	#define IMG_SIZE_HALF 	7
@@ -98,7 +95,7 @@ static void draw_skymap_fg(GdkDrawable *canvas)
 	for (i=0; i<g_gpsdata.sv_channel_count; i++) {
 		sv = &g_gpsdata.sv_channels[i];
 		if (sv->elevation >= 0 && sv->azimuth >= 0) {
-			r = SKY_IMAGE_R * (1.0 - sv->elevation / 90.0);
+			r = bg_image_r * (1.0 - sv->elevation / 90.0);
 			deg = sv->azimuth * DEG_TO_RAD;
 			x = center_x - r * cos(deg);
 			y = center_y + r * sin(deg);
@@ -113,39 +110,6 @@ static void draw_skymap_fg(GdkDrawable *canvas)
 			gdk_draw_pixbuf(canvas, g_context.skymap_gc, g_xpm_images[xpm_id].pixbuf,
 				0, 0, x - IMG_SIZE_HALF, y - IMG_SIZE_HALF, IMG_SIZE, IMG_SIZE, GDK_RGB_DITHER_NONE, -1, -1);
 		}
-	}
-}
-
-static void draw_skymap_bg(GdkDrawable *canvas)
-{
-	int off_x, off_y;
-	int center_x, center_y;
-	int line_offset_x, line_offset_y;
-	int r, i, d;
-
-	center_x = da_width / 2;
-	center_y = da_height / 2;
-	line_offset_x = (da_width - SKY_IMAGE_SIZE) / 2;
-	line_offset_y = (da_height - SKY_IMAGE_SIZE) / 2;
-	off_x = (da_width - SKY_IMAGE_SIZE) / 2;
-	off_y = (da_height - SKY_IMAGE_SIZE) / 2;
-
-	if (g_view.sky_pixbuf) {
-		gdk_draw_pixbuf (canvas, g_context.drawingarea_bggc, g_view.sky_pixbuf,
-			0, 0, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE, GDK_RGB_DITHER_NONE, -1, -1);
-	}
-
-	gdk_draw_line(canvas, g_context.grid_line_gc,
-		line_offset_x, center_y, da_width - line_offset_x, center_y);
-	gdk_draw_line(canvas, g_context.grid_line_gc,
-		center_x, line_offset_y, center_x, da_height - line_offset_y);
-
-	r = SKY_IMAGE_SIZE >> 1;
-
-	for (i=1; i<=9; i++) {
-		d = r * i / 9.0;
-		gdk_draw_arc(canvas, g_context.grid_line_gc, FALSE,
-			center_x - d, center_y - d, d << 1, d << 1, 0, CIRCLE_ARC);
 	}
 }
 
@@ -168,19 +132,32 @@ static inline void update_skymap()
 
 	memcpy(last_hash, hash, sizeof(last_hash));
 
-	int off_x = (da_width - SKY_IMAGE_SIZE) / 2;
-	int off_y = (da_height - SKY_IMAGE_SIZE) / 2;
+	int center_x = da_width >> 1;
+	int center_y = da_height >> 1;
+
+	int off_x = center_x - bg_image_r;
+	int off_y = center_y - bg_image_r;
 
 	if (g_view.sky_pixbuf) {
 		gdk_draw_pixbuf (g_view.pixmap, g_context.drawingarea_bggc, g_view.sky_pixbuf,
-			0, 0, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE,	GDK_RGB_DITHER_NONE, -1, -1);
+			0, 0, off_x, off_y, bg_image_d, bg_image_d, GDK_RGB_DITHER_NONE, -1, -1);
 		draw_skymap_fg(g_view.pixmap);
 		gdk_draw_drawable (skymap_da->window, g_context.drawingarea_bggc, g_view.pixmap,
-			off_x, off_y, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
+			off_x, off_y, off_x, off_y, bg_image_d, bg_image_d);
 	} else {
-		draw_skymap_bg(g_view.pixmap);
-		gdk_draw_drawable (skymap_da->window, g_context.drawingarea_bggc, g_view.pixmap,
-			off_x, off_y, off_x, off_y, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
+		gdk_draw_rectangle (skymap_da->window, skymap_da->style->bg_gc[GTK_STATE_NORMAL], TRUE, 0, 0, da_width, da_height);
+		gdk_draw_line(skymap_da->window, g_context.grid_line_gc, off_x, center_y, da_width - off_x, center_y);
+		gdk_draw_line(skymap_da->window, g_context.grid_line_gc, center_x, off_y, center_x, da_height - off_y);
+
+		int d;
+		for (i=1; i<=9; i++) {
+			d = bg_image_r * i / 9.0;
+			gdk_draw_arc(skymap_da->window, g_context.grid_line_gc, FALSE,
+				center_x - d, center_y - d, d << 1, d << 1, 0, CIRCLE_ARC);
+		}
+		g_view.sky_pixbuf = gdk_pixbuf_get_from_drawable (NULL, g_view.pixmap,
+			gdk_rgb_get_colormap(), 0, 0, 0, 0, bg_image_d, bg_image_d);
+
 		draw_skymap_fg(skymap_da->window);
 	}
 }
@@ -275,10 +252,6 @@ static void svinfo_treeview_func_text(GtkTreeViewColumn *tree_column, GtkCellRen
 static void create_treeview(GtkWidget *treeview, GtkWidget *treeview_sw, char *col_names[],
 		int col_names_count)
 {
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (treeview_sw), GTK_SHADOW_NONE);
-	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (treeview_sw),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
 	GtkTreeSelection *sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
 	gtk_tree_selection_set_mode (sel, GTK_SELECTION_NONE);
 
@@ -460,47 +433,33 @@ static gboolean skymap_da_configure_event (GtkWidget *widget, GdkEventConfigure 
 
 	GError *error = NULL;
 	char *file = ICONDIR"/sky.png";
-	g_view.sky_pixbuf = gdk_pixbuf_new_from_file(file, &error);
 
-	if (! g_view.sky_pixbuf) {
-		log_warn("Load image %s failed: %s\n", file, error->message);
-		g_error_free(error);
-		g_view.sky_pixbuf = gdk_pixbuf_get_from_drawable (NULL, skymap_da->window,
-			gdk_rgb_get_colormap(), 0, 0, 0, 0, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
-		if (! g_view.sky_pixbuf) {
-			log_warn("Create sky pixbuf %s failed: %s\n", file);
-		} else {
-			draw_skymap_bg(g_view.pixmap);
-			int off_x = (da_width - SKY_IMAGE_SIZE) / 2;
-			int off_y = (da_height - SKY_IMAGE_SIZE) / 2;
-			g_view.sky_pixbuf = gdk_pixbuf_get_from_drawable (NULL, g_view.pixmap,
-				gdk_rgb_get_colormap(), off_x, off_y, 0, 0, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
-		}
+	/* slightly enlarge the bg image, because fg SV's can be drawn out of biggest circle. */
+
+	if (g_view.sky_pixbuf)
+		g_object_unref(g_view.sky_pixbuf);
+
+	int d, edge = 20;
+	g_view.sky_pixbuf = gdk_pixbuf_new_from_file_at_scale(file, da_width - edge, da_height - edge, TRUE, &error);
+	bg_image_d = MIN(da_width, da_height);
+	bg_image_r = bg_image_d >> 1;
+
+	if (g_view.sky_pixbuf) {
+		d = gdk_pixbuf_get_width(g_view.sky_pixbuf);
+
+		int off_x = (da_width - d) >> 1;
+		int off_y = (da_height - d) >> 1;
+		gdk_draw_rectangle (g_view.pixmap, skymap_da->style->bg_gc[GTK_STATE_NORMAL], TRUE, 0, 0, da_width, da_height);
+		gdk_draw_pixbuf (g_view.pixmap, g_context.drawingarea_bggc, g_view.sky_pixbuf,
+			0, 0, off_x, off_y, d, d, GDK_RGB_DITHER_NONE, -1, -1);
+		g_object_unref(g_view.sky_pixbuf);
+		off_x = (da_width - bg_image_d) >> 1;
+		off_y = (da_height - bg_image_d) >> 1;
+		g_view.sky_pixbuf = gdk_pixbuf_get_from_drawable (NULL, g_view.pixmap,
+			gdk_rgb_get_colormap(), off_x, off_y, 0, 0, bg_image_d, bg_image_d);
 	}
 
-	gdk_draw_rectangle (skymap_da->window, skymap_da->style->bg_gc[GTK_STATE_NORMAL], TRUE, 0, 0, da_width, da_height);
-
 	return FALSE;
-}
-
-static GtkWidget * create_skymap()
-{
-	GtkWidget *sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (sw), GTK_SHADOW_NONE);
-	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (sw),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-	skymap_da = gtk_drawing_area_new();
-	gtk_widget_set_size_request(skymap_da, SKY_IMAGE_SIZE, SKY_IMAGE_SIZE);
-	g_signal_connect (skymap_da, "expose-event", G_CALLBACK(skymap_da_expose_event), NULL);
-	g_signal_connect (skymap_da, "configure-event", G_CALLBACK(skymap_da_configure_event), NULL);
-
-	GtkWidget *viewport = gtk_viewport_new(NULL, NULL);
-	gtk_viewport_set_shadow_type(GTK_VIEWPORT (viewport), GTK_SHADOW_NONE);
-	gtk_container_add(GTK_CONTAINER(sw), viewport);
-	gtk_container_add(GTK_CONTAINER(viewport), skymap_da);
-
-	return sw;
 }
 
 static inline void update_nav_basic()
@@ -603,6 +562,8 @@ GtkWidget * nav_tab_create()
 
 	/* time label */
 	time_label = gtk_label_new("");
+	gtk_label_set_selectable(GTK_LABEL(time_label), FALSE);
+	gtk_widget_modify_fg(time_label, GTK_STATE_NORMAL, &g_base_colors[ID_COLOR_White]);
 	gtk_misc_set_alignment(GTK_MISC(time_label), 0, 0);
 	gtk_box_pack_start (GTK_BOX (vbox), time_label, FALSE, FALSE, 5);
 
@@ -622,7 +583,7 @@ GtkWidget * nav_tab_create()
 
 	/* svinfo treeviews ubx */
 	ubx_svinfo_treeview = gtk_tree_view_new ();
-	ubx_svinfo_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	ubx_svinfo_treeview_sw = new_scrolled_window (NULL);
 	create_treeview(ubx_svinfo_treeview, ubx_svinfo_treeview_sw, ubx_svinfo_col_names,
 			sizeof(ubx_svinfo_col_names)/sizeof(char *));
 
@@ -635,7 +596,7 @@ GtkWidget * nav_tab_create()
 
 	/* svinfo trview: ogpsd */
 	ogpsd_svinfo_treeview = gtk_tree_view_new ();
-	ogpsd_svinfo_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
+	ogpsd_svinfo_treeview_sw = new_scrolled_window (NULL);
 	create_treeview(ogpsd_svinfo_treeview, ogpsd_svinfo_treeview_sw, ogpsd_svinfo_col_names,
 			sizeof(ogpsd_svinfo_col_names)/sizeof(char *));
 
@@ -650,8 +611,12 @@ GtkWidget * nav_tab_create()
 
 	/* sky map */
 	label = gtk_label_new("      Sky Map    ");
-	GtkWidget *skymap = create_skymap();
-	gtk_notebook_append_page (GTK_NOTEBOOK (notebook), skymap, label);
+	skymap_da = gtk_drawing_area_new();
+	g_signal_connect (skymap_da, "expose-event", G_CALLBACK(skymap_da_expose_event), NULL);
+	g_signal_connect (skymap_da, "configure-event", G_CALLBACK(skymap_da_configure_event), NULL);
+
+	GtkWidget *skymap_sw = new_scrolled_window(skymap_da);
+	gtk_notebook_append_page (GTK_NOTEBOOK (notebook), skymap_sw, label);
 
 	return vbox;
 }

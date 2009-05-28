@@ -135,8 +135,6 @@ typedef struct __context_t
 
 	gboolean sound_enabled;
 
-	gboolean sbas_enable;
-
 	gboolean show_rulers;
 	gboolean show_latlon_grid;
 	gboolean track_enabled;
@@ -171,7 +169,7 @@ typedef enum
 	TAB_ID_NONE = -1,
 	TAB_ID_MAIN_VIEW = 0,
 	TAB_ID_MAIN_MENU,
-	TAB_ID_AGPS,
+	TAB_ID_GPS_CFG,
 	TAB_ID_MAP_TILE,
 	TAB_ID_NAV_DATA,
 	TAB_ID_TRACK,

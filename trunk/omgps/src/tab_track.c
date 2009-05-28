@@ -15,8 +15,6 @@ static track_group_t *tracks = NULL;
 static GtkWidget *colorlist, *change_color_button, *new_track_button, *stop_track_button;
 static int current_color_idx = 0;
 
-static pthread_mutex_t save_lock = PTHREAD_MUTEX_INITIALIZER;
-
 static GtkWidget *filelist_treeview, *filelist_treeview_sw;
 static GtkListStore *filelist_store = NULL;
 static char *filelist_treeview_col_names[] = {"File name", "Start time", "End time", "Records"};
@@ -24,6 +22,9 @@ static char *filelist_treeview_col_names[] = {"File name", "Start time", "End ti
 static GtkWidget *replay_button, *delete_button, *export_gpx_button;
 static char *replay_file = NULL;
 static char *replay_file_path = NULL;
+
+static int previous_gps_tow = 0;
+static int first_gps_tow = 0;
 
 static void add_file_to_list(GtkTreeIter *iter, char *filepath, char *filename);
 
@@ -71,27 +72,14 @@ char *get_cur_replay_filepath()
 }
 
 /**
- * Thread unsafe, but ok.
- * Can be saved explicitly, especially when fix status changes to invalid.
+ * May be called by polling thread or main thread. protected by gdk UI lock.
  */
-int track_saveall(gboolean _free)
+int track_save(gboolean all, gboolean _free)
 {
+	int i, count = 0;
+
 	if (! tracks || tracks->count == 0)
-		return TRUE;
-
-	LOCK_MUTEX(&save_lock);
-
-	if (track_file_path == NULL) {
-		if (create_record_filename() != 0) {
-			char *msg = "create file name for track recording failed.";
-			log_error(msg);
-			warn_dialog(msg);
-			LOCK_MUTEX(&save_lock);
-			return 0;
-		} else {
-			log_info("new track record file: %s", track_file_path);
-		}
-	}
+		goto END;
 
 	struct stat st;
 	gboolean empty = (stat(track_file_path, &st) < 0) || st.st_size == 0;
@@ -101,7 +89,6 @@ int track_saveall(gboolean _free)
 
 	if (! fp) {
 		log_warn("can't open track records file: %s", track_file_path);
-		UNLOCK_MUTEX(&save_lock);
 		return 0;
 	}
 
@@ -111,7 +98,7 @@ int track_saveall(gboolean _free)
 			TRACK_HEAD_LABEL_3"%-10u\n", (U4)tracks->starttime, 0u, 0u);
 	}
 
-	int i, count = _free? tracks->count : tracks->count / 3;
+	count = all? tracks->count : tracks->count / 3;
 	for (i=0; i<count; i++) {
 		fprintf(fp, "%lf\t%lf\t%d\n", tracks->tps[i].wgs84.lat,
 			tracks->tps[i].wgs84.lon, tracks->tps[i].time_offset);
@@ -122,9 +109,12 @@ int track_saveall(gboolean _free)
 	/* update end time and count */
 	fp = fopen(track_file_path, "r+");
 
+	/* end time: time of last valid record */
+	time_t endtime = tracks->starttime + tracks->tps[tracks->count - 1].time_offset;
+
 	int offset = strlen(TRACK_HEAD_LABEL_1) + 11 + strlen(TRACK_HEAD_LABEL_2);
 	fseek(fp, offset, SEEK_SET);
-	fprintf(fp, "%-10u", (U4)time(NULL));
+	fprintf(fp, "%-10u", (U4)endtime);
 	offset += 11 + strlen(TRACK_HEAD_LABEL_3);
 	fseek(fp, offset, SEEK_SET);
 	fprintf(fp, "%-10u", (U4)(tracks->total_count - (tracks->count - count)));
@@ -136,14 +126,14 @@ int track_saveall(gboolean _free)
 	gtk_list_store_insert (filelist_store, &iter, 0);
 	add_file_to_list(&iter, track_file_path, track_file_name);
 
+END:
+
 	if (_free) {
 		free(tracks);
 		tracks = NULL;
 		free(track_file_path);
 		track_file_path = NULL;
 	}
-
-	UNLOCK_MUTEX(&save_lock);
 
 	return count;
 }
@@ -152,27 +142,48 @@ void track_cleanup()
 {
 	/* better to do this after death of polling thread */
 	if (g_context.track_enabled)
-		track_saveall(TRUE);
+		track_save(TRUE, TRUE);
 
 	track_replay_cleanup();
 }
 
-static void track_new()
+/**
+ * May be called by polling thread or main thread. protected by gdk UI lock.
+ */
+static gboolean track_init(gboolean create_recording_file_path)
 {
 	if (tracks == NULL) {
-		tracks = (track_group_t *)malloc(sizeof(track_group_t));
-		if (tracks == NULL) {
+		if (! (tracks = (track_group_t *)malloc(sizeof(track_group_t)))) {
 			char *msg = "Track: can't allocate memory. exit";
 			log_error(msg);
 			warn_dialog(msg);
 			exit(0);
 		}
 	}
+
 	tracks->count = 0;
 	tracks->total_count = 0;
-
 	tracks->starttime = 0;
 	tracks->last_drawn_index = 0;
+
+	previous_gps_tow = 0;
+	first_gps_tow = 0;
+
+	if (create_recording_file_path) {
+		if (track_file_path)
+			free(track_file_path);
+
+		if (create_record_filename() != 0) {
+			char *msg = "create file name for track recording failed.";
+			log_error(msg);
+			warn_dialog(msg);
+			return FALSE;
+		} else {
+			log_info("new track record file: %s", track_file_path);
+		}
+	}
+
+	return TRUE;
 }
 
 /**
@@ -182,19 +193,11 @@ static void track_new()
  */
 void track_add(/*double lat, double lon, U4 gps_tow*/)
 {
-	static int previous_gps_tow = 0;
-	static int first_gps_tow = 0;
 	static const float threshold = TRACK_MAX_DELTA * (180.0 / (WGS84_SEMI_MAJOR_AXIS * M_PI));
 
-	if (tracks == NULL) {
-		track_new();
-		previous_gps_tow = 0;
-		first_gps_tow = 0;
-	}
-
 	/* NOTE: make max frequency is 1 HZ, since we record time offset with unit of seconds */
-	if (g_gpsdata.llh_itow - previous_gps_tow < 1000)
-		return;
+	//if (g_gpsdata.llh_itow - previous_gps_tow < 1000)
+	//	return;
 
 	trackpoint_t *tp;
 
@@ -202,14 +205,13 @@ void track_add(/*double lat, double lon, U4 gps_tow*/)
 		tp = &(tracks->tps[tracks->count-1]);
 		float lat_delta = (float)fabs(g_gpsdata.lat - tp->wgs84.lat);
 		float lon_delta = (float)fabs(g_gpsdata.lon - tp->wgs84.lon);
-		//log_debug("lat_delta=%f, lon_delta=%f", lat_delta, lon_delta);
-
 		if (sqrt(lat_delta * lat_delta + lon_delta * lon_delta) < threshold)
 			return;
 
-		/* new GPS week */
+		/* new GPS week: split track file */
 		if (g_context.track_enabled && (g_gpsdata.llh_itow < previous_gps_tow)) {
-			track_saveall(TRUE);
+			track_save(TRUE, FALSE);
+			track_init(TRUE);
 			return;
 		}
 	} else {
@@ -232,23 +234,15 @@ void track_add(/*double lat, double lon, U4 gps_tow*/)
 	if (tracks->count >= TRACK_MAX_IN_MEM_RECORDS) {
 		int saved_count = 0;
 		if (g_context.track_enabled)
-			saved_count = track_saveall(FALSE);
+			saved_count = track_save(FALSE, FALSE);
 		if (saved_count == 0) {
 			/* lose data but we need space */
 			saved_count = tracks->count / 2;
 		}
 		/* move the remaining elements to array head */
-		tracks->count = tracks->count - saved_count;
+		tracks->count -= saved_count;
 		memcpy(&tracks->tps[0], &(tracks->tps[saved_count]), tracks->count * sizeof(trackpoint_t));
 	}
-}
-
-int track_get_count()
-{
-	if (tracks)
-		return tracks->count;
-	else
-		return 0;
 }
 
 /**
@@ -357,6 +351,9 @@ static void add_file_to_list(GtkTreeIter *iter, char *filepath, char *filename)
 
 static void new_track_button_clicked(GtkWidget *widget, gpointer data)
 {
+	if (! track_init(TRUE))
+		return;
+
 	g_context.track_enabled = TRUE;
 	gtk_widget_set_sensitive(new_track_button, FALSE);
 	gtk_widget_set_sensitive(stop_track_button, TRUE);
@@ -374,8 +371,7 @@ static void stop_track_button_clicked(GtkWidget *widget, gpointer data)
 	gtk_widget_set_sensitive(new_track_button, TRUE);
 	gtk_widget_set_sensitive(stop_track_button, FALSE);
 
-	if (tracks && tracks->count > 0)
-		track_saveall(TRUE);
+	track_save(TRUE, FALSE);
 
 	ctx_gpsfix_on_track_state_changed();
 }
@@ -417,7 +413,7 @@ void track_tab_on_show ()
 	}
 }
 
-void colorlist_changed (GtkComboBox *widget, gpointer user_data)
+static void colorlist_changed (GtkComboBox *widget, gpointer user_data)
 {
 	int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(colorlist));
 	if (idx == current_color_idx)
@@ -425,7 +421,7 @@ void colorlist_changed (GtkComboBox *widget, gpointer user_data)
 	gtk_widget_set_sensitive(change_color_button, TRUE);
 }
 
-static void create_colorlist(GtkWidget *box)
+static void create_colorlist()
 {
 	GtkListStore *store = gtk_list_store_new (1, GDK_TYPE_PIXBUF);
 	colorlist = gtk_combo_box_new_with_model(GTK_TREE_MODEL(store));
@@ -440,7 +436,6 @@ static void create_colorlist(GtkWidget *box)
 		gtk_list_store_append (store, &iter);
 		gtk_list_store_set (store, &iter, 0, g_base_color_pixbufs[i], -1);
 	}
-	gtk_container_add (GTK_CONTAINER (box), colorlist);
 	g_object_unref (store);
 
 	g_signal_connect (G_OBJECT (colorlist), "changed", G_CALLBACK (colorlist_changed), NULL);
@@ -540,11 +535,11 @@ static void export_gpx(char *file)
 	time_t tt = start_time;
 	struct tm *tm = gmtime(&tt);
 
-	//log_debug("start time=%ld, end time=%ld", start_time, end_time);
-
-	fprintf(fp_dest, "<gpx version=\"1.1\" creator=\"omgps\""
-			"xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 "
-			"http://www.topografix.com/GPX/1/1/gpx.xsd\">\n");
+	fprintf(fp_dest,
+		"<?xml version=\"1.0\"?><gpx version=\"1.1\" creator=\"omgps - http://code.google.com/p/omgps/\"\n "
+		"xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n "
+		"xmlns=\"http://www.topografix.com/GPX/1/1\"\n"
+		"xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n");
 
 	strftime(tm_buf, sizeof(tm_buf), "%Y-%m-%dT%H:%M:%SZ", tm);
 	fprintf(fp_dest, "<time>%s</time>\n", tm_buf);
@@ -632,11 +627,7 @@ static GtkWidget * create_replay_pane()
 	g_signal_connect (G_OBJECT(filelist_treeview), "cursor-changed",
 		G_CALLBACK (replay_filelist_treeview_row_selected), NULL);
 
-	filelist_treeview_sw = gtk_scrolled_window_new (NULL, NULL);
-	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (filelist_treeview_sw), GTK_SHADOW_NONE);
-	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (filelist_treeview_sw),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
+	filelist_treeview_sw = new_scrolled_window (NULL);
 	gtk_container_add (GTK_CONTAINER (filelist_treeview_sw), filelist_treeview);
 
 	/* add columns to the tree view */
@@ -715,6 +706,8 @@ static GtkWidget * create_replay_pane()
 
 GtkWidget * track_tab_create()
 {
+	track_init(g_context.track_enabled);
+
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 5);
 
 	/* Track record */
@@ -734,18 +727,19 @@ GtkWidget * track_tab_create()
 
 	/* color */
 	GtkWidget *color_hbox = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_start(GTK_BOX(vbox), color_hbox, FALSE, FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(vbox), color_hbox, FALSE, FALSE, 0);
 
-	GtkWidget *color_label = gtk_label_new(" Set line color: ");
+	GtkWidget *color_label = gtk_label_new("Set line color: ");
 	gtk_misc_set_alignment(GTK_MISC(color_label), 0.0, 0.5);
-	gtk_container_add (GTK_CONTAINER(color_hbox), color_label);
+	gtk_box_pack_start (GTK_BOX(color_hbox), color_label, FALSE, FALSE, 5);
 
 	create_colorlist(color_hbox);
+	gtk_box_pack_start (GTK_BOX(color_hbox), colorlist, TRUE, TRUE, 5);
 
 	change_color_button = gtk_button_new_with_label("Change");
 	g_signal_connect (G_OBJECT (change_color_button), "clicked",
 		G_CALLBACK (change_color_button_clicked), NULL);
-	gtk_container_add (GTK_CONTAINER (color_hbox), change_color_button);
+	gtk_box_pack_start (GTK_BOX(color_hbox), change_color_button, TRUE, TRUE, 0);
 
 	track_colorlist_set_initial_color();
 

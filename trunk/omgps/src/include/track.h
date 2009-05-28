@@ -34,7 +34,6 @@ typedef struct __track_group_t
 {
 	/* include those on-disk */
 	int total_count;
-	char *file;
 
 	time_t starttime; /* System time */
 
@@ -57,9 +56,8 @@ extern void track_replay_cleanup();
 
 extern void track_add(/*double lat, double lon, U4 gps_tow*/);
 extern void track_cleanup();
-extern gboolean track_saveall(gboolean free);
+extern gboolean track_save(gboolean all, gboolean free);
 extern void track_draw(GdkPixmap *canvas, gboolean refresh, GdkRectangle *rect);
-extern int track_get_count();
 extern void track_replay_centralize();
 
 #endif /* TRACK_H_ */

@@ -37,7 +37,7 @@ static inline void on_new_record()
 
 	switch (g_tab_id) {
 	case TAB_ID_MAIN_VIEW:
-		if(! g_context.map_view_frozen)
+		if (! g_context.map_view_frozen)
 			poll_update_ui();
 		break;
 	case TAB_ID_NAV_DATA:
@@ -210,8 +210,12 @@ static void suspend_resume(gboolean skip_suspend)
 		fso_gypsy_cleanup();
 
 	/* to avoid long time gap */
-	if (g_context.track_enabled)
-		track_saveall(TRUE);
+	if (g_context.track_enabled) {
+		LOCK_UI();
+		track_save(TRUE, FALSE);
+		g_context.track_enabled = FALSE;
+		UNLOCK_UI();
+	}
 
 SUSPEND:
 

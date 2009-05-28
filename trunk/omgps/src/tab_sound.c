@@ -50,7 +50,7 @@ static void change_button_clicked(GtkWidget *widget, gpointer data)
 	gtk_widget_set_sensitive(change_button, FALSE);
 }
 
-void file_list_changed (GtkComboBox *widget, gpointer user_data)
+static void file_list_changed (GtkComboBox *widget, gpointer user_data)
 {
 	int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(file_list));
 	char *file = gtk_combo_box_get_active_text(GTK_COMBO_BOX(file_list));
@@ -67,6 +67,8 @@ GtkWidget * sound_tab_create()
 	GtkWidget *vbox = gtk_vbox_new(FALSE, 0);
 
 	GtkWidget *desc = gtk_label_new(" Sound for speed, weak signal, and low power");
+	gtk_label_set_selectable(GTK_LABEL(desc), FALSE);
+	gtk_widget_modify_fg(desc, GTK_STATE_NORMAL, &g_base_colors[ID_COLOR_White]);
 	gtk_misc_set_alignment(GTK_MISC(desc), 0.0, 0.5);
 
 	gtk_box_pack_start (GTK_BOX (vbox), desc, FALSE, FALSE, 10);

@@ -11,7 +11,7 @@ static GtkWidget *notebook;
 
 #define MENU_COUNT 6
 static TAB_ID_T menu_ids[MENU_COUNT] = {
-	TAB_ID_AGPS, TAB_ID_NAV_DATA, TAB_ID_TRACK, TAB_ID_SCRATCH, TAB_ID_MAP_TILE, TAB_ID_SOUND
+	TAB_ID_GPS_CFG, TAB_ID_NAV_DATA, TAB_ID_TRACK, TAB_ID_SCRATCH, TAB_ID_MAP_TILE, TAB_ID_SOUND
 };
 static GtkWidget *menu_buttons[MENU_COUNT];
 
@@ -25,7 +25,7 @@ void update_ui_on_poll_state_changed()
 	ctx_gpsfix_on_poll_state_changed();
 
 	if (g_tab_id == TAB_ID_MAIN_VIEW || g_tab_id == TAB_ID_MAIN_MENU ||
-		g_tab_id == TAB_ID_AGPS || g_tab_id == TAB_ID_TRACK) {
+		g_tab_id == TAB_ID_GPS_CFG || g_tab_id == TAB_ID_TRACK) {
 		(g_menus[g_tab_id].on_show)();
 	}
 
@@ -249,7 +249,7 @@ static void init_panes()
 	for (i=0; i<CTX_ID_MAX; i++)
 		gtk_widget_hide(g_ctx_containers[i]);
 
-	switch_to_main_view(CTX_ID_NONE);
+	//switch_to_main_view(CTX_ID_NONE);
 }
 
 void register_ui_panes()
@@ -262,8 +262,8 @@ void register_ui_panes()
 		"Main Menu",
 		&menu_tab_create,
 		&menu_tab_on_show);
-	register_menu_tab(TAB_ID_AGPS,
-		"AGPS & Reset",
+	register_menu_tab(TAB_ID_GPS_CFG,
+		"GPS Config",
 		&agps_tab_create,
 		&agps_tab_on_show);
 	register_menu_tab(TAB_ID_MAP_TILE,
@@ -352,15 +352,15 @@ void switch_to_main_view(CTX_ID_T ctx_id)
 
 		if (ctx_id == CTX_ID_GPS_FIX) {
 			map_toggle_menu_button(TRUE);
-			show = POLL_STATE_TEST(RUNNING);
+			show = ! POLL_STATE_TEST(SUSPENDING);
 		} else {
 			map_toggle_menu_button(FALSE);
 		}
 		if (show) {
 			gtk_widget_show(container);
 			g_ctx_panes[ctx_id].on_show();
+			cur_ctx_id = ctx_id;
 		}
-		cur_ctx_id = ctx_id;
 	}
 
 	if (g_tab_id != TAB_ID_MAIN_VIEW)

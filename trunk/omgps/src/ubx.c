@@ -22,6 +22,7 @@ static const ubx_msg_type_t type_cfg_rst = 		{UBX_CLASS_CFG, UBX_ID_CFG_RST};
 static const ubx_msg_type_t type_cfg_rxm = 		{UBX_CLASS_CFG, UBX_ID_CFG_RXM};
 
 static const ubx_msg_type_t type_mon_ver = 		{UBX_CLASS_MON, UBX_ID_MON_VER};
+static const ubx_msg_type_t type_cfg_nav2 = 	{UBX_CLASS_CFG, UBX_ID_CFG_NAV2};
 
 /**
  * <buf>: checksum must be set already.
@@ -216,13 +217,72 @@ void ubx_mon_ver_poll(char *buf, int buf_len)
 
 	if (! (ubx_issue_cmd(packet, sizeof(packet)) &&
 		ubx_read_next_msg(&msg, &type_mon_ver))) {
-		log_warn("ubx_mon_ver_poll: failed.\n");
+		log_warn("MON-VER: poll failed.\n");
 		return;
 	}
 
 	snprintf(buf, buf_len, "software=%s; hardware=%s", msg.payload_addr, &msg.payload_addr[30]);
 
 	/* no extension at all, ignore */
+}
+
+/**
+ * NOTE: U-BLOX5 chip use CFG-NAV5 instead of CFG-NAV2.
+ * model:
+ * 1 Stationary
+ * 2 Pedestrian
+ * 3 Automotive
+ * 4 Sea
+ * 5 Airborne with <1g Acceleration
+ * 6 Airborne with <2g Acceleration
+ * 7 Airborne with <4g Acceleration
+ * fix_mode:
+ * 1: 2D only
+ * 2: Auto 2D/3D
+ * 3: 3D only
+ *
+ * min_ELE: Minimum Elevation for a GNSS satellite to be used in NAV, degree, default 5
+ * maxsv: Maximum number of GNSS satellites for Navigation, default 16
+ */
+gboolean ubx_cfg_nav2(U1 model, gboolean readack)
+{
+	U1 maxsv = 0x10;
+	U1 fix_mode = 0x02; /* auto */
+	U1 min_ELE = 0x05;
+	U1 allow_alma_nav = 0X0;
+
+	U1 packet[8+40] = {
+		0xB5, 0x62,
+		type_cfg_nav2.class, type_cfg_nav2.id,
+		40, 0x00,
+		model,
+		0x00,
+		0x00, 0x00,
+		0x03,
+		0x03,
+		maxsv,
+		fix_mode,
+		0x50, 0xC3, 0x00, 0x00,
+		0x0F,
+		0x0A,
+		min_ELE,
+		0x3C,
+		0x0F, /* default 0 */
+		allow_alma_nav,
+		0x00, 0x00,
+		0xFA, 0x00,
+		0xFA, 0x00,
+		0x64, 0x00,
+		0x2C, 0x01,
+		0x00,
+		0x00,
+		0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00
+	};
+
+	return ubx_issue_cmd(packet, sizeof(packet)) && (! readack || ubx_read_ack(&type_cfg_nav2));
 }
 
 /**
@@ -293,6 +353,10 @@ gboolean ubx_cfg_rate(U2 meas, gboolean readack)
 }
 
 /**
+ * By default SBAS is enabled with three prioritized SBAS channels and it will use
+ * any received SBAS satellites (except for those in test mode) for navigation,
+ * ionosphere parameters and corrections.
+ *
  * SBAS Usage (Bitmask):
  * Bit 0: Use SBAS GEOs as a ranging source (for navigation)
  * Bit 1: Use SBAS Differential Corrections
@@ -320,17 +384,23 @@ gboolean ubx_cfg_sbas(gboolean enable, gboolean readack)
 }
 
 /**
- * Firmware 5.00.
- * 	0: Max performance mode
- * 	4: Eco mode
+ * GPS Sensitivity Mode:
+ * 0: Normal
+ * 1: Fast Acquisition
+ * 2: High Sensitivity
+ * 3: Auto
+ *
+ * Low Power Mode:
+ * 0: Continuous Tracking Mode
+ * 1: Fix Now
  */
-gboolean ubx_cfg_rxm(U1 lp_mode, gboolean readack)
+gboolean ubx_cfg_rxm(U1 gps_mode, U1 lp_mode, gboolean readack)
 {
 	U1 packet[] = {
 		0xB5, 0x62,
 		type_cfg_rxm.class, type_cfg_rxm.id,
 		0x02, 0x00,
-		0, lp_mode,
+		gps_mode, lp_mode,
 		0x00, 0x00
 	};
 
@@ -338,7 +408,6 @@ gboolean ubx_cfg_rxm(U1 lp_mode, gboolean readack)
 }
 
 /**
- * Firmware 5.00.
  * BBR Sections to clear:
  *
  * 0x0000 Hotstart
