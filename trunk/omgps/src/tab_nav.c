@@ -22,6 +22,8 @@ static GtkWidget *time_label, *notebook, *skymap_da, *speed_2d_label, *vel_down_
 
 #define CIRCLE_ARC		23040
 
+#define EDGE			16
+
 /* bg_image_r: max circle, less than bg_image_d */
 static int da_width, da_height, bg_image_d, bg_image_r;
 
@@ -151,8 +153,9 @@ static inline void update_skymap()
 		gdk_draw_line(skymap_da->window, g_context.grid_line_gc, center_x, off_y, center_x, da_height - off_y);
 
 		int d;
+		int R = bg_image_r - (EDGE >> 1);
 		for (i=1; i<=9; i++) {
-			d = bg_image_r * i / 9.0;
+			d = R * i / 9.0;
 			gdk_draw_arc(skymap_da->window, g_context.grid_line_gc, FALSE,
 				center_x - d, center_y - d, d << 1, d << 1, 0, CIRCLE_ARC);
 		}
@@ -440,9 +443,11 @@ static gboolean skymap_da_configure_event (GtkWidget *widget, GdkEventConfigure 
 	if (g_view.sky_pixbuf)
 		g_object_unref(g_view.sky_pixbuf);
 
-	int d, edge = 16;
-	g_view.sky_pixbuf = gdk_pixbuf_new_from_file_at_scale(file, da_width - edge, da_height - edge, TRUE, &error);
+	int d;
+	g_view.sky_pixbuf = gdk_pixbuf_new_from_file_at_scale(file, da_width - EDGE, da_height - EDGE, TRUE, &error);
+
 	bg_image_d = MIN(da_width, da_height);
+	bg_image_r = bg_image_d >> 1;
 
 	if (g_view.sky_pixbuf) {
 		d = gdk_pixbuf_get_width(g_view.sky_pixbuf);
@@ -458,8 +463,6 @@ static gboolean skymap_da_configure_event (GtkWidget *widget, GdkEventConfigure 
 		g_view.sky_pixbuf = gdk_pixbuf_get_from_drawable (NULL, g_view.pixmap,
 			gdk_rgb_get_colormap(), off_x, off_y, 0, 0, bg_image_d, bg_image_d);
 	}
-
-	bg_image_r = (bg_image_d - edge) >> 1;
 
 	return FALSE;
 }
