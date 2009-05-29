@@ -28,6 +28,7 @@ static pthread_cond_t replay_cond = PTHREAD_COND_INITIALIZER;
 static gboolean running = FALSE;
 static gboolean stop = FALSE;
 static gboolean suspend = FALSE;
+static gboolean suspending = FALSE;
 static gboolean toend = FALSE;
 
 static point_t last_point;
@@ -382,6 +383,7 @@ static void *replay_routine()
 
 		stop = FALSE;
 		suspend = FALSE;
+		suspending = FALSE;
 		last_draw_idx = -1;
 
 		/* settings */
@@ -440,7 +442,9 @@ static void *replay_routine()
 				i = end_idx;
 			} else if (suspend) {
 				suspend = FALSE;
+				suspending = TRUE;
 				wait_ms(0, &replay_cond, &replay_lock, TRUE);
+				suspending = FALSE;
 				LOCK_UI();
 				gtk_button_set_label(GTK_BUTTON(suspend_button), "suspend");
 				UNLOCK_UI();
@@ -517,7 +521,7 @@ static void start_button_clicked(GtkWidget *widget, gpointer data)
 
 static void suspend_button_clicked(GtkWidget *widget, gpointer data)
 {
-	if (suspend) {
+	if (suspending) {
 		suspend = FALSE;
 	} else {
 		suspend = TRUE;
