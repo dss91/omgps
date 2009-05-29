@@ -38,7 +38,7 @@ typedef enum {
 static int cur_page_num = PAGE_NUM_BASIC;
 
 /* It seems only first 4 are used actually */
-static char *fixtype_text[] = { "No fix", "Dead reckoning only", "2D", "3D",
+static char *fixtype_text[] = { "No fix", "Dead reckoning", "2D", "3D",
 	"GPS + dead reckoning",	"Time only fix"};
 
 typedef enum
