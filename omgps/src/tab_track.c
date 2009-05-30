@@ -122,9 +122,12 @@ int track_save(gboolean all, gboolean _free)
 	fclose(fp);
 
 	/* add to list */
-	GtkTreeIter iter;
-	gtk_list_store_insert (filelist_store, &iter, 0);
-	add_file_to_list(&iter, track_file_path, track_file_name);
+
+	if (all) {
+		GtkTreeIter iter;
+		gtk_list_store_insert (filelist_store, &iter, 0);
+		add_file_to_list(&iter, track_file_path, track_file_name);
+	}
 
 END:
 
