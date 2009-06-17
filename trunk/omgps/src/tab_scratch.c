@@ -385,21 +385,30 @@ GtkWidget * scratch_tab_create()
 
 	/* add columns to the tree view */
 	GtkCellRenderer *renderer;
-	GtkTreeViewColumn *column;
+	GtkTreeViewColumn *col;
 	int i;
 	int col_count = sizeof (filelist_treeview_col_names) / sizeof (char *);
 
 	for (i=0; i<col_count; i++) {
 		renderer = gtk_cell_renderer_text_new();
-		column = gtk_tree_view_column_new_with_attributes (filelist_treeview_col_names[i],
+		col = gtk_tree_view_column_new_with_attributes (filelist_treeview_col_names[i],
 			renderer, "text", i, NULL);
-		gtk_tree_view_column_set_clickable(column, FALSE);
-		gtk_tree_view_append_column (GTK_TREE_VIEW(filelist_treeview), column);
+		if (i == 0) {
+			gtk_tree_view_column_set_clickable(col, TRUE);
+			gtk_tree_view_column_set_sort_order(col, GTK_SORT_DESCENDING);
+			gtk_tree_view_column_set_sort_column_id(col, 0);
+			gtk_tree_view_column_set_sort_indicator(col, TRUE);
+		} else {
+			gtk_tree_view_column_set_clickable(col, FALSE);
+		}
+		gtk_tree_view_append_column (GTK_TREE_VIEW(filelist_treeview), col);
 	}
 
 	filelist_store = gtk_list_store_new (col_count,	G_TYPE_STRING, G_TYPE_STRING);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(filelist_treeview), GTK_TREE_MODEL(filelist_store));
+	GtkTreeSortable *sortable = GTK_TREE_SORTABLE(filelist_store);
+	gtk_tree_sortable_set_sort_column_id(sortable, 0, GTK_SORT_DESCENDING);
 
+	gtk_tree_view_set_model(GTK_TREE_VIEW(filelist_treeview), GTK_TREE_MODEL(filelist_store));
 
 	GtkWidget *hbox = gtk_hbox_new(TRUE, 5);
 
@@ -465,7 +474,6 @@ GtkWidget * scratch_tab_create()
 	screenshot_label = gtk_label_new("");
 	screenshot_image = gtk_image_new();
 	gtk_box_pack_start(GTK_BOX(image_box), screenshot_label, FALSE, FALSE, 0);
-	//gtk_misc_set_alignment(GTK_MISC(screenshot_label), 0.0, 0.5);
 
 	GtkWidget *sw = new_scrolled_window (screenshot_image);
 
