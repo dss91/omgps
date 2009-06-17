@@ -1,0 +1,10 @@
+changes:
+=============================================================
+
+0.1_20090618-1
+----------------
+
+1. bugfix: gpsfix tab does not show up 
+2. bugfix: too much records inserted into track file list while tracking
+3. defect: track strange sorting, http://code.google.com/p/omgps/issues/detail?id=5&can=1
+4. defect: scratch sorting
