@@ -290,7 +290,7 @@ static void create_pid_file()
 
 	snprintf(pid_file, sizeof(pid_file), "%s/omgps.pid", g_context.top_dir);
 
-	int fd = open(pid_file, O_RDWR | O_CREAT, 0600);
+	int fd = open(pid_file, O_RDWR | O_CREAT);
 	if (fd < 0) {
 		err = "Unable to create pid file. exit.";
 		goto END;
