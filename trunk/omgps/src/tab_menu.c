@@ -14,6 +14,8 @@ static TAB_ID_T menu_ids[MENU_COUNT] = {
 	TAB_ID_GPS_CFG, TAB_ID_NAV_DATA, TAB_ID_TRACK, TAB_ID_SCRATCH, TAB_ID_MAP_TILE, TAB_ID_SOUND
 };
 static GtkWidget *menu_buttons[MENU_COUNT];
+static GtkWidget *ctx_box;
+static CTX_ID_T cur_ctx_id = CTX_ID_NONE;
 
 #define BUTTON_LABEL(bt) \
 	gtk_bin_get_child(GTK_BIN(&((GtkButton *)bt)->bin))
@@ -28,8 +30,6 @@ void update_ui_on_poll_state_changed()
 		g_tab_id == TAB_ID_GPS_CFG || g_tab_id == TAB_ID_TRACK) {
 		(g_menus[g_tab_id].on_show)();
 	}
-
-	gtk_widget_set_sensitive(poll_button, TRUE);
 }
 
 void update_ui_on_zoom_level_changed()
@@ -42,23 +42,23 @@ void menu_tab_on_show()
 {
 	char buf[80];
 	char *run_state = "";
-	if (POLL_STATE_TEST(RUNNING))
+	if (POLL_STATE_TEST(RUNNING)) {
 		run_state = "running";
-	else if (POLL_STATE_TEST(STARTING))
+		gtk_button_set_label(GTK_BUTTON(poll_button), " Stop");
+		gtk_widget_set_sensitive(poll_button, TRUE);
+	} else if (POLL_STATE_TEST(STARTING)) {
 		run_state = "starting";
-	else if (POLL_STATE_TEST(SUSPENDING))
+	} else if (POLL_STATE_TEST(SUSPENDING)) {
 		run_state = "disconnected";
-	else
+		gtk_button_set_label(GTK_BUTTON(poll_button), "Start");
+		gtk_widget_set_sensitive(poll_button, TRUE);
+	} else {
 		run_state = "stopping";
+	}
 
 	snprintf(buf, sizeof(buf), " GPS status: <span color='red'>%s</span>", run_state);
 
 	gtk_label_set_markup(GTK_LABEL(run_status_label), buf);
-
-	if (POLL_STATE_TEST(SUSPENDING))
-		gtk_button_set_label(GTK_BUTTON(poll_button), "Start");
-	else if (POLL_STATE_TEST(RUNNING))
-		gtk_button_set_label(GTK_BUTTON(poll_button), " Stop");
 
 	/* nav data */
 	gtk_widget_set_sensitive(menu_buttons[1], POLL_STATE_TEST(RUNNING));
@@ -80,7 +80,6 @@ static void poll_button_clicked(GtkWidget *widget, gpointer data)
 
 	if (start) {
 		status_label_set_text("<span color='red'>GPS is connecting...</span>", TRUE);
-		switch_to_tab(TAB_ID_MAIN_VIEW);
 	} else {
 		status_label_set_text("<span color='red'>GPS is disconnecting...</span>", TRUE);
 	}
@@ -248,8 +247,6 @@ static void init_panes()
 
 	for (i=0; i<CTX_ID_MAX; i++)
 		gtk_widget_hide(g_ctx_containers[i]);
-
-	//switch_to_main_view(CTX_ID_NONE);
 }
 
 void register_ui_panes()
@@ -309,9 +306,6 @@ void register_ui_panes()
 	init_panes();
 }
 
-
-static GtkWidget *ctx_box;
-
 GtkWidget* ctx_tab_container_create()
 {
     ctx_box = gtk_vbox_new(FALSE, 0);
@@ -323,11 +317,24 @@ void ctx_tab_container_add(GtkWidget *tab)
 	gtk_container_add(GTK_CONTAINER(ctx_box), tab);
 }
 
-static CTX_ID_T cur_ctx_id = CTX_ID_NONE;
-
 CTX_ID_T ctx_tab_get_current_id()
 {
 	return cur_ctx_id;
+}
+
+void switch_to_ctx_tab(CTX_ID_T ctx_id)
+{
+	if (cur_ctx_id != CTX_ID_NONE)
+		gtk_widget_hide(g_ctx_containers[cur_ctx_id]);
+
+	if (ctx_id == CTX_ID_NONE)
+		return;
+
+	map_toggle_menu_button(ctx_id == CTX_ID_GPS_FIX);
+
+	gtk_widget_show(g_ctx_containers[ctx_id]);
+	g_ctx_panes[ctx_id].on_show();
+	cur_ctx_id = ctx_id;
 }
 
 void switch_to_tab(TAB_ID_T page_num)
@@ -343,25 +350,7 @@ void switch_to_tab(TAB_ID_T page_num)
 
 void switch_to_main_view(CTX_ID_T ctx_id)
 {
-	if (cur_ctx_id != CTX_ID_NONE)
-		gtk_widget_hide(g_ctx_containers[cur_ctx_id]);
-
-	if (ctx_id != CTX_ID_NONE) {
-		GtkWidget *container = g_ctx_containers[ctx_id];
-		gboolean show = TRUE;
-
-		if (ctx_id == CTX_ID_GPS_FIX) {
-			map_toggle_menu_button(TRUE);
-			show = ! POLL_STATE_TEST(SUSPENDING);
-		} else {
-			map_toggle_menu_button(FALSE);
-		}
-		if (show) {
-			gtk_widget_show(container);
-			g_ctx_panes[ctx_id].on_show();
-			cur_ctx_id = ctx_id;
-		}
-	}
+	switch_to_ctx_tab(ctx_id);
 
 	if (g_tab_id != TAB_ID_MAIN_VIEW)
 		switch_to_tab(TAB_ID_MAIN_VIEW);
