@@ -1,0 +1,20 @@
+= 0.1_20090529-2 =
+
+   * bug fix: track replay, resume does not work 
+
+= 0.1_20090529-1 =
+
+   * bug fix: malformated .gpx file format
+   * bug fix: choose lat/lon position on main view by clicking does not work well
+   * defect: "keep cursor in view", refresh view before cursor moves out of view (1/4 width/height)
+   * defect: "sky map", clean up UI, better support 640 x 480 -- by scaling background image.
+   * new feature: configure "dynamic platform model" with "CFG-NAV2", you can choose from Pedestrian or Automotive, etc.
+   * eye-friendly things: change text color; clear bottom label on main view by clicking. 
+
+= 0.1_20090527-1 =
+
+   * bug fix: "keep cursor in view" does not always behave as expected.
+   * bug fix: full screen mode, popup message dialogs does not show on above
+   * bug fix: SIGSEGV on stopping track
+   * defect: add speed unit of km/h and mph, in addition to m/s
+   * update UI, including sky map. 
