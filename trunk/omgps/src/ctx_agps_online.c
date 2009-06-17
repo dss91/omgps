@@ -254,7 +254,7 @@ static gboolean dump_aid_data(aid_args_t *args)
 	snprintf(tmp, sizeof(tmp), "%s.tmp", args->file);
 
 	if (counter > 0) {
-		fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC);
 		if (fd > 0) {
 			write_len = 0;
 			while ((n = write(fd, &buf[write_len], total_len - write_len)) > 0)
