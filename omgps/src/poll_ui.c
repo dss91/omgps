@@ -453,25 +453,19 @@ void ctx_gpsfix_on_track_state_changed()
 
 void ctx_gpsfix_on_poll_state_changed()
 {
-	switch(g_context.poll_state) {
-	case POLL_STATE_RUNNING:
-		if (ctx_tab_get_current_id() == CTX_ID_NONE)
-			switch_to_main_view(CTX_ID_GPS_FIX);
-		break;
-	case POLL_STATE_STARTING:
-	case POLL_STATE_STOPPING:
-		break;
-	case POLL_STATE_SUSPENDING:
-		last_rect_valid = FALSE;
-		//if (ctx_tab_get_current_id() == CTX_ID_NONE)
-		//	switch_to_main_view(CTX_ID_NONE);
-		break;
-	}
-
-	if (g_context.poll_state == POLL_STATE_STARTING || g_context.poll_state == POLL_STATE_STOPPING ) {
+	if (POLL_STATE_TEST(RUNNING) || POLL_STATE_TEST(SUSPENDING)) {
 		int i;
 		for (i=0; i<3; i++)
 			nav_da_data[i].hash = nav_da_data[i].last_hash = INVALID_HASH;
+
+		if (POLL_STATE_TEST(RUNNING)) {
+			if (ctx_tab_get_current_id() == CTX_ID_NONE)
+				switch_to_ctx_tab(CTX_ID_GPS_FIX);
+		} else if (POLL_STATE_TEST(SUSPENDING)) {
+			if (ctx_tab_get_current_id() == CTX_ID_GPS_FIX)
+				switch_to_ctx_tab(CTX_ID_NONE);
+		}
+		last_rect_valid = FALSE;
 	}
 }
 

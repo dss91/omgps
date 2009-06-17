@@ -269,6 +269,7 @@ extern void sound_tab_on_show();
 
 extern void switch_to_tab(TAB_ID_T page_num);
 extern void switch_to_main_view(CTX_ID_T id);
+extern void switch_to_ctx_tab(CTX_ID_T ctx_id);
 extern void register_ui_panes();
 
 extern GtkWidget* ctx_tab_container_create();
