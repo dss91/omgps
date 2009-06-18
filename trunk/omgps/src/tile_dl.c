@@ -333,8 +333,6 @@ static void download_next_batch(tile_downloader_t *td)
 		UNLOCK_UI();
 		LOCK_MUTEX(&(td->lock));
 	}
-
-	//log_debug("total=%d, done=%d, failed=%d", batch->num_dl_total, batch->num_dl_done, batch->num_dl_failed);
 }
 
 static void free_pending_frees()
