@@ -497,7 +497,7 @@ int main(int argc, char **argv)
 
 	gdk_threads_init();
 
-	LOCK_UI();
+	gdk_threads_enter();
 
 	/* styles string */
 	if (style_string)
@@ -520,6 +520,6 @@ int main(int argc, char **argv)
 	init (log2console);
 
 	gtk_main();
-	UNLOCK_UI();
+	gdk_threads_leave();
 	return 0;
 }

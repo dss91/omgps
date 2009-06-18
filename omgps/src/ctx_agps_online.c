@@ -190,7 +190,9 @@ void set_initial_aid_data()
 
 	char *msg = "Set local cached AID data...";
 	log_info(msg);
+	LOCK_UI();
 	status_label_set_text(msg, FALSE);
+	UNLOCK_UI();
 
 	if (! set_aid_ini())
 		goto END;
@@ -211,7 +213,10 @@ END:
 
 	msg = ret ? "Cached AID data was submitted." : "Initial AID data is invalid, skip.";
 	log_info(msg);
+
+	LOCK_UI();
 	status_label_set_text(msg, FALSE);
+	UNLOCK_UI();
 }
 
 static gboolean dump_aid_data(aid_args_t *args)
