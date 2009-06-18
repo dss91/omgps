@@ -10,7 +10,7 @@ context_t		g_context;
 /* protected by gdk global lock: LOCK_UI/UNLOCK_UI() */
 gps_data_t		g_gpsdata;
 
-char			g_ubx_receiver_versions[64];
+//char			g_ubx_receiver_versions[64];
 GtkWidget *		g_window = NULL;
 
 TAB_ID_T		g_tab_id = TAB_ID_MAIN_VIEW;

@@ -327,8 +327,8 @@ gboolean usart_init()
 
 	show_status("GPS was initialized.");
 
-	ubx_mon_ver_poll(g_ubx_receiver_versions, sizeof(g_ubx_receiver_versions));
-	show_status(g_ubx_receiver_versions);
+	//ubx_mon_ver_poll(g_ubx_receiver_versions, sizeof(g_ubx_receiver_versions));
+	//show_status(g_ubx_receiver_versions);
 
 	return TRUE;
 }
