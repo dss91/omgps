@@ -50,7 +50,6 @@ typedef enum __poll_state_t
 	POLL_STATE_SUSPENDING,
 	POLL_STATE_STARTING,
 	POLL_STATE_RUNNING,
-	POLL_STATE_STOPPING
 } poll_state_t;
 
 typedef enum __poll_engine_t
@@ -245,7 +244,7 @@ extern void ctx_gpsfix_on_poll_engine_changed();
 extern void ctx_gpsfix_on_poll_state_changed();
 extern void ctx_gpsfix_on_track_state_changed();
 
-extern void update_ui_on_poll_state_changed();
+extern void update_tab_on_poll_state_changed();
 extern void poll_ui_on_view_range_changed();
 
 #endif /* GPS_H_ */

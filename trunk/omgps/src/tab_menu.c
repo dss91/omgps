@@ -6,7 +6,7 @@
 #include "track.h"
 #include "customized.h"
 
-static GtkWidget *poll_button, *run_status_label;
+static GtkWidget *start_button, *stop_button, *run_status_label;
 static GtkWidget *notebook;
 
 #define MENU_COUNT 6
@@ -22,10 +22,8 @@ static CTX_ID_T cur_ctx_id = CTX_ID_NONE;
 
 #define MENU_SEP "<span foreground=\"#A9A9A9\">&gt;</span>"
 
-void update_ui_on_poll_state_changed()
+void update_tab_on_poll_state_changed()
 {
-	ctx_gpsfix_on_poll_state_changed();
-
 	if (g_tab_id == TAB_ID_MAIN_VIEW || g_tab_id == TAB_ID_MAIN_MENU ||
 		g_tab_id == TAB_ID_GPS_CFG || g_tab_id == TAB_ID_TRACK) {
 		(g_menus[g_tab_id].on_show)();
@@ -44,20 +42,15 @@ void menu_tab_on_show()
 	char *run_state = "";
 	if (POLL_STATE_TEST(RUNNING)) {
 		run_state = "running";
-		gtk_button_set_label(GTK_BUTTON(poll_button), " Stop");
-		gtk_widget_set_sensitive(poll_button, TRUE);
-	} else if (POLL_STATE_TEST(STARTING)) {
-		run_state = "starting";
+		if (! GTK_WIDGET_SENSITIVE(stop_button))
+			gtk_widget_set_sensitive(stop_button, TRUE);
 	} else if (POLL_STATE_TEST(SUSPENDING)) {
 		run_state = "disconnected";
-		gtk_button_set_label(GTK_BUTTON(poll_button), "Start");
-		gtk_widget_set_sensitive(poll_button, TRUE);
-	} else {
-		run_state = "stopping";
+		if (! GTK_WIDGET_SENSITIVE(start_button))
+			gtk_widget_set_sensitive(start_button, TRUE);
 	}
 
 	snprintf(buf, sizeof(buf), " GPS status: <span color='red'>%s</span>", run_state);
-
 	gtk_label_set_markup(GTK_LABEL(run_status_label), buf);
 
 	/* nav data */
@@ -72,16 +65,25 @@ static void menu_item_button_clicked(GtkWidget *widget, gpointer data)
 
 static void poll_button_clicked(GtkWidget *widget, gpointer data)
 {
-	gboolean start = g_context.poll_state == POLL_STATE_SUSPENDING;
-	if (! start && !confirm_dialog("Stop GPS?"))
+	gboolean is_start_bt = (gboolean)data;
+
+	if (POLL_STATE_TEST(RUNNING) == is_start_bt)
 		return;
 
-	gtk_widget_set_sensitive(poll_button, FALSE);
+	if (!is_start_bt && !confirm_dialog("Stop GPS?"))
+		return;
 
-	if (start) {
+	if (is_start_bt)
+		gtk_widget_set_sensitive(start_button, FALSE);
+	else
+		gtk_widget_set_sensitive(stop_button, FALSE);
+
+	if (is_start_bt) {
+		gtk_label_set_markup(GTK_LABEL(run_status_label),
+			" GPS status: <span color='red'>connecting...</span>");
 		status_label_set_text("<span color='red'>GPS is connecting...</span>", TRUE);
 	} else {
-		status_label_set_text("<span color='red'>GPS is disconnecting...</span>", TRUE);
+		status_label_set_text("", FALSE);
 	}
 
 	notify_poll_thread_suspend_resume();
@@ -100,9 +102,19 @@ GtkWidget * menu_tab_create()
 
 	gtk_container_add (GTK_CONTAINER (status_hbox), run_status_label);
 
-	poll_button = gtk_button_new_with_label("Start");
-	g_signal_connect (G_OBJECT (poll_button), "clicked", G_CALLBACK (poll_button_clicked), NULL);
-	gtk_container_add (GTK_CONTAINER (status_hbox), poll_button);
+	GtkWidget *poll_hbox = gtk_hbox_new(TRUE, 5);
+	gtk_container_add (GTK_CONTAINER (status_hbox), poll_hbox);
+
+	start_button = gtk_button_new_with_label("Start");
+	g_signal_connect (G_OBJECT (start_button), "clicked", G_CALLBACK (poll_button_clicked), (gpointer)TRUE);
+	gtk_container_add (GTK_CONTAINER (poll_hbox), start_button);
+	if (g_context.run_gps_on_start)
+		gtk_widget_set_sensitive(start_button, FALSE);
+
+	stop_button = gtk_button_new_with_label("Stop");
+	g_signal_connect (G_OBJECT (stop_button), "clicked", G_CALLBACK (poll_button_clicked), (gpointer)FALSE);
+	gtk_container_add (GTK_CONTAINER (poll_hbox), stop_button);
+	gtk_widget_set_sensitive(stop_button, FALSE);
 
 	gtk_box_pack_start (GTK_BOX (vbox), status_hbox, FALSE, FALSE, 0);
 
@@ -136,6 +148,12 @@ GtkWidget * menu_tab_create()
 	}
 
 	gtk_box_pack_start (GTK_BOX (vbox), table, FALSE, FALSE, 0);
+
+	GtkWidget *site_label = gtk_label_new("http://code.google.com/p/omgps/");
+	gtk_label_set_selectable(GTK_LABEL(site_label), FALSE);
+	gtk_widget_modify_fg(site_label, GTK_STATE_NORMAL, &g_base_colors[ID_COLOR_White]);
+	gtk_misc_set_alignment(GTK_MISC(site_label), 0.5, 0);
+	gtk_box_pack_start (GTK_BOX (vbox), site_label, FALSE, FALSE, 10);
 
 	return vbox;
 }
@@ -333,10 +351,20 @@ void switch_to_ctx_tab(CTX_ID_T ctx_id)
 	if (cur_ctx_id != CTX_ID_NONE)
 		gtk_widget_hide(g_ctx_containers[cur_ctx_id]);
 
-	if (ctx_id == CTX_ID_NONE || (ctx_id == CTX_ID_GPS_FIX && POLL_STATE_TEST(SUSPENDING)))
+	if (ctx_id == CTX_ID_NONE) {
+		cur_ctx_id = CTX_ID_NONE;
 		return;
+	}
 
-	map_toggle_menu_button(ctx_id == CTX_ID_GPS_FIX);
+	if (ctx_id == CTX_ID_GPS_FIX) {
+		map_toggle_menu_button(TRUE);
+		if (POLL_STATE_TEST(SUSPENDING)) {
+			cur_ctx_id = CTX_ID_NONE;
+			return;
+		}
+	} else {
+		map_toggle_menu_button(FALSE);
+	}
 
 	gtk_widget_show(g_ctx_containers[ctx_id]);
 	g_ctx_panes[ctx_id].on_show();

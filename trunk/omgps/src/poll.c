@@ -221,13 +221,15 @@ SUSPEND:
 
 	/* suspend: user action or due to failure */
 
-	POLL_STATE_SET(SUSPENDING);
-
 	LOCK_UI();
+
+	POLL_STATE_SET(SUSPENDING);
 	g_gpsdata.latlon_valid = FALSE;
 	g_gpsdata.vel_valid = FALSE;
 	g_gpsdata.svinfo_valid = FALSE;
-	update_ui_on_poll_state_changed();
+	ctx_gpsfix_on_poll_state_changed();
+	update_tab_on_poll_state_changed();
+
 	UNLOCK_UI();
 
 	LOCK_MUTEX(&lock);
@@ -236,7 +238,10 @@ SUSPEND:
 
 RUN:
 
+	LOCK_UI();
 	POLL_STATE_SET(STARTING);
+	ctx_gpsfix_on_poll_state_changed();
+	UNLOCK_UI();
 
 	ask_suspend = FALSE;
 
@@ -268,7 +273,8 @@ UBX:
 	POLL_STATE_SET(RUNNING);
 
 	LOCK_UI();
-	update_ui_on_poll_state_changed();
+	ctx_gpsfix_on_poll_state_changed();
+	update_tab_on_poll_state_changed();
 	UNLOCK_UI();
 
 	g_context.cursor_in_view = TRUE;
