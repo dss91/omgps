@@ -204,7 +204,7 @@ GtkWidget * ctx_tab_scratch_create()
 	gtk_container_add (GTK_CONTAINER (vbox), hbox);
 
 	create_colorlist();
-	gdk_gc_set_rgb_fg_color(g_context.track_gc, &g_base_colors[cur_color_idx]);
+	gdk_gc_set_rgb_fg_color(g_context.scratch_gc, &g_base_colors[cur_color_idx]);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(colorlist), cur_color_idx);
 	gtk_container_add (GTK_CONTAINER (hbox), colorlist);
 
