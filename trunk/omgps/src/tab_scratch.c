@@ -5,9 +5,8 @@
 #include "omgps.h"
 #include "customized.h"
 
-static GtkWidget *color_buttons[BASE_COLOR_COUNT];
 static GtkWidget *clear_button, *save_button, *lockview_button;
-static int last_color_idx = -1;
+static int cur_color_idx = ID_COLOR_Blue;
 
 static mouse_handler_t mouse_scratch_handler;
 
@@ -19,7 +18,7 @@ static mouse_handler_t mouse_scratch_handler;
 static int point_idx = -1;
 static point_t points[MAX_POINTS];
 
-static GtkWidget *filelist_treeview, *filelist_treeview_sw;
+static GtkWidget *filelist_treeview, *filelist_treeview_sw, *colorlist;
 static GtkListStore *filelist_store = NULL;
 static char *filelist_treeview_col_names[] = {"File name", "Last Modified Time"};
 static GtkWidget *notebook, *view_button, *delete_button, *screenshot_label, *screenshot_image;
@@ -123,19 +122,6 @@ static void scratch_redraw_view()
 		g_view.fglayer.visible.width, g_view.fglayer.visible.height);
 }
 
-static void color_button_toggled(GtkWidget *widget, gpointer data)
-{
-	if (! gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)))
-		return;
-
-	if (last_color_idx >= 0)
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(color_buttons[last_color_idx]), FALSE);
-
-	last_color_idx = (int)data;
-	/* this color is not allocated, so we call gdk_gc_set_rgb_fg_color() */
-	gdk_gc_set_rgb_fg_color(g_context.scratch_gc, &g_base_colors[last_color_idx]);
-}
-
 static void clear_button_clicked(GtkWidget *widget, gpointer data)
 {
 	map_draw_back_layers(g_view.pixmap);
@@ -167,43 +153,40 @@ static void close_button_clicked(GtkWidget *widget, gpointer data)
 	switch_to_main_view(CTX_ID_GPS_FIX);
 }
 
-/**
- * The GtkColorButton is good, but the pop-up dialog does not shown properly,
- * and arbitrary color makes no sense, so just show several colored buttons instead.
- * It takes no effect to set a button color when it is created and added to container!
- * Reference:
- * (1) http://library.gnome.org/devel/gtk/stable/
- * (2) http://ometer.com/gtk-colors.html
- */
-static void render_color_buttons()
-{
-	int i;
-	GtkWidget *button;
-	GdkColor *color;
-
-	for (i=0; i<BASE_COLOR_COUNT; i++) {
-		color = &g_base_colors[i];
-		button = color_buttons[i];
-		gtk_widget_show(button);
-		modify_button_color(GTK_BUTTON(button), color, FALSE);
-
-		/* Help recognize colored buttons when selected/active */
-		color = (i==ID_COLOR_Aqua || i==ID_COLOR_Silver||i==ID_COLOR_Lime ||
-				i==ID_COLOR_White || i==ID_COLOR_Yellow)?
-				&g_base_colors[ID_COLOR_Black] : &g_base_colors[ID_COLOR_White];
-
-		modify_button_color(GTK_BUTTON(button), color, TRUE);
-	}
-
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(color_buttons[ID_COLOR_Black]), TRUE);
-}
-
 void ctx_tab_scratch_on_show()
 {
-	if (last_color_idx == -1)
-		render_color_buttons();
-
 	point_idx = -1;
+}
+
+static void colorlist_changed (GtkComboBox *widget, gpointer user_data)
+{
+	int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(colorlist));
+	if (idx != cur_color_idx) {
+		/* this color is not allocated, so we call gdk_gc_set_rgb_fg_color() */
+		gdk_gc_set_rgb_fg_color(g_context.scratch_gc, &g_base_colors[idx]);
+		cur_color_idx = idx;
+	}
+}
+
+/* colored toggle buttons fail to work when button theme uses bg images */
+static void create_colorlist()
+{
+	GtkListStore *store = gtk_list_store_new (1, GDK_TYPE_PIXBUF);
+	colorlist = gtk_combo_box_new_with_model(GTK_TREE_MODEL(store));
+	GtkCellRenderer *cell = gtk_cell_renderer_pixbuf_new();
+	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(colorlist), cell, TRUE);
+	gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (colorlist), cell, "pixbuf", 0, NULL);
+
+	GtkTreeIter iter;
+	int i;
+
+	for (i=0; i<BASE_COLOR_COUNT; i++) {
+		gtk_list_store_append (store, &iter);
+		gtk_list_store_set (store, &iter, 0, g_base_color_pixbufs[i], -1);
+	}
+	g_object_unref (store);
+
+	g_signal_connect (G_OBJECT (colorlist), "changed", G_CALLBACK (colorlist_changed), NULL);
 }
 
 GtkWidget * ctx_tab_scratch_create()
@@ -217,24 +200,13 @@ GtkWidget * ctx_tab_scratch_create()
 	gtk_container_add(GTK_CONTAINER (vbox), title_label);
 	gtk_container_add(GTK_CONTAINER (vbox), sep);
 
-	/* color buttons */
-
-	GtkWidget *color_buttons_hbox = gtk_hbox_new(TRUE, 2);
-	gtk_container_add (GTK_CONTAINER (vbox), color_buttons_hbox);
-
-	int i;
-	for (i=0; i<BASE_COLOR_COUNT; i++) {
-		color_buttons[i] = (GtkWidget *)gtk_toggle_button_new_with_label("  ");
-		gtk_toggle_button_set_mode(GTK_TOGGLE_BUTTON(color_buttons[i]), TRUE);
-		gtk_container_add (GTK_CONTAINER (color_buttons_hbox), color_buttons[i]);
-		g_signal_connect (G_OBJECT (color_buttons[i]), "toggled",
-			G_CALLBACK (color_button_toggled), (gpointer)i);
-	}
-
-	/* function buttons */
-
 	GtkWidget *hbox = gtk_hbox_new(TRUE, 1);
 	gtk_container_add (GTK_CONTAINER (vbox), hbox);
+
+	create_colorlist();
+	gdk_gc_set_rgb_fg_color(g_context.track_gc, &g_base_colors[cur_color_idx]);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(colorlist), cur_color_idx);
+	gtk_container_add (GTK_CONTAINER (hbox), colorlist);
 
 	lockview_button = gtk_toggle_button_new_with_label("lock view");
 	g_signal_connect (G_OBJECT (lockview_button), "toggled",

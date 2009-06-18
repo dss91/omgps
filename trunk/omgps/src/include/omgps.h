@@ -14,6 +14,9 @@
 #include "util.h"
 #include "config.h"
 
+/* Help debugging non-GPS related modules on development platform */
+#define PLATFORM_FSO		TRUE
+
 #define TOP_DIR				".omgps"
 
 /* alpha blending levels: 25%, 50%, 75% */

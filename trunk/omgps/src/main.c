@@ -22,16 +22,20 @@ static pthread_mutex_t cleanup_lock = PTHREAD_MUTEX_INITIALIZER;
 static char pid_file[128];
 static int pid_fd = -1;
 
+#if (PLATFORM_FSO)
+#define DEFAULT_FONT "Sans Bold 3.5"
+#else
+#define DEFAULT_FONT "Sans Bold 12"
+#endif
+
 /* SHR (20090509) set expander-size as 40, too large! */
+
 static const char *style_string =
+	"gtk-font-name = \""DEFAULT_FONT"\"\n"
 	"style \"scroll\" { GtkScrollbar::slider-width = 25 }\n"
 	"class \"*\" style \"scroll\"\n"
-	"gtk-font-name = \"Sans Bold 14px\"\n"
 	"style \"treeview\" { GtkTreeView::expander-size = 18 }\n"
 	"class \"*\" style \"treeview\"\n";
-
-/* Help debugging non-GPS related modules on development platform */
-#define PLATFORM_FSO	TRUE
 
 /**
  * Called by: atexit, signal handler, window delete event handler
@@ -500,6 +504,10 @@ int main(int argc, char **argv)
 		gtk_rc_parse_string (style_string);
 
 	gtk_init(&argc, &argv);
+
+	/* SHR 20090615: can't set font in rc */
+	gtk_settings_set_string_property (gtk_settings_get_default(),
+		"gtk-font-name", DEFAULT_FONT, "foobar");
 
 	gtk_widget_set_default_colormap(gdk_rgb_get_colormap());
 

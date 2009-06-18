@@ -126,7 +126,7 @@ static void* play_sound_routine(void *arg)
 {
 	time_t tm;
 	char speed_buf[20];
-	float speed;
+	float speed_2d;
 	int sv_in_use;
 
 	running = TRUE;
@@ -153,7 +153,12 @@ static void* play_sound_routine(void *arg)
 				/* GPS data is protected by gdk global lock */
 				pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
 				LOCK_UI();
-				speed = g_gpsdata.speed_2d;
+				speed_2d = g_gpsdata.speed_2d;
+				if (g_context.speed_unit == SPEED_UNIT_KMPH) {
+					speed_2d *= MPS_TO_KMPH;
+				} else if (g_context.speed_unit == SPEED_UNIT_MPH) {
+					speed_2d *= MPS_TO_MPH;
+				}
 				sv_in_use = g_gpsdata.sv_in_use;
 				UNLOCK_UI();
 				pthread_sigmask(SIG_UNBLOCK, &sig_set, NULL);
@@ -162,7 +167,7 @@ static void* play_sound_routine(void *arg)
 					tm = time(NULL);
 					if (tm - last_time_speed > NOTIFY_INTERVAL_SPEED) {
 						last_time_speed = tm;
-						sprintf(speed_buf, "%.1f", speed);
+						sprintf(speed_buf, "%.1f", speed_2d);
 						plugin_play_speed(speed_buf);
 						WAIT_A_WHILE(1000);
 					}

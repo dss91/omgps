@@ -178,7 +178,13 @@ static void init_panes()
 	GtkWidget *vbox, *hbox, *label, *sp, *link, *widget;
 	TAB_ID_T id;
 
-	PangoFontDescription *font_desc = pango_font_description_from_string ("Sans Bold 15px");
+	PangoFontDescription *font_desc = pango_font_description_from_string (
+#if (PLATFORM_FSO)
+			"Sans Bold 4"
+#else
+			"Sans Bold 14"
+#endif
+	);
 
 	for (i=0; i<TAB_ID_MAX; i++) {
 		id = g_menus[i].id;

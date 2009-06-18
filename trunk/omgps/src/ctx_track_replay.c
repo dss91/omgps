@@ -101,7 +101,7 @@ static gboolean replay_read_records()
 	int i, n;
 
 	for (i=0; i < record_count; i++) {
-		n = fscanf(fp, "%lf\t%lf\t%d\n",
+		n = fscanf(fp, "%lf\t%lf\t%u\n",
 			&replay_records[i].wgs84.lat, &replay_records[i].wgs84.lon, &replay_records[i].time_offset);
 		if (n == EOF)
 			break;
@@ -246,6 +246,8 @@ static void replay_draw_lines()
 		g_view.fglayer.visible.x, g_view.fglayer.visible.y,
 		g_view.fglayer.visible.x, g_view.fglayer.visible.y,
 		g_view.fglayer.visible.width, g_view.fglayer.visible.height);
+
+	gdk_flush();
 }
 
 /**
@@ -356,6 +358,7 @@ static void replay_update_ui (int from, int to)
 
 	replay_update_progress_bar(record->time_offset);
 
+	gdk_flush();
 }
 
 /* make sure the UI lock is released when the thread is killed with SIGUSR1 */

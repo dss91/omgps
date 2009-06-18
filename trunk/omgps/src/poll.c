@@ -501,7 +501,13 @@ void stop_poll_thread()
 		} else {
 			if (g_gpsdata.sv_in_use >= 3) {
 				PangoLayout *layout = gtk_widget_create_pango_layout (g_view.da, "Dumping AID data...");
-				PangoFontDescription *desc = pango_font_description_from_string ("Sans Bold 20px");
+				PangoFontDescription *desc = pango_font_description_from_string (
+#if (PLATFORM_FSO)
+			"Sans Bold 6"
+#else
+			"Sans Bold 18"
+#endif
+				);
 				pango_layout_set_font_description (layout, desc);
 
 				int text_width, text_height;

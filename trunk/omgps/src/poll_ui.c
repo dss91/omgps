@@ -410,6 +410,8 @@ void poll_update_ui()
 	}
 
 	last_valid = g_gpsdata.latlon_valid;
+
+	gdk_flush();
 }
 
 void ctx_tab_gps_fix_on_show()
