@@ -314,7 +314,11 @@ static gboolean nav_da_expose_event (GtkWidget *widget, GdkEventExpose *evt, gpo
 {
 	int i;
 	for (i=0; i<3; i++) {
-		nav_da_data[i].hash = 0;
+		if (POLL_STATE_TEST(STARTING)) {
+			nav_da_data[i].hash = nav_da_data[i].last_hash = INVALID_HASH;
+		} else {
+			nav_da_data[i].hash = 0;
+		}
 		draw_labels(&nav_da_data[i]);
 	}
 	return FALSE;
@@ -410,8 +414,6 @@ void poll_update_ui()
 	}
 
 	last_valid = g_gpsdata.latlon_valid;
-
-	gdk_flush();
 }
 
 void ctx_tab_gps_fix_on_show()
@@ -455,19 +457,16 @@ void ctx_gpsfix_on_track_state_changed()
 
 void ctx_gpsfix_on_poll_state_changed()
 {
-	if (POLL_STATE_TEST(RUNNING) || POLL_STATE_TEST(SUSPENDING)) {
-		int i;
-		for (i=0; i<3; i++)
-			nav_da_data[i].hash = nav_da_data[i].last_hash = INVALID_HASH;
+	last_rect_valid = FALSE;
 
-		if (POLL_STATE_TEST(RUNNING)) {
-			if (ctx_tab_get_current_id() == CTX_ID_NONE)
-				switch_to_ctx_tab(CTX_ID_GPS_FIX);
-		} else if (POLL_STATE_TEST(SUSPENDING)) {
-			if (ctx_tab_get_current_id() == CTX_ID_GPS_FIX)
-				switch_to_ctx_tab(CTX_ID_NONE);
-		}
-		last_rect_valid = FALSE;
+	if (POLL_STATE_TEST(STARTING)) {
+		switch_to_main_view(CTX_ID_GPS_FIX);
+	} else if (POLL_STATE_TEST(RUNNING)) {
+		if (ctx_tab_get_current_id() == CTX_ID_NONE)
+			switch_to_ctx_tab(CTX_ID_GPS_FIX);
+	} else if (POLL_STATE_TEST(SUSPENDING)) {
+		if (ctx_tab_get_current_id() == CTX_ID_GPS_FIX)
+			switch_to_ctx_tab(CTX_ID_NONE);
 	}
 }
 
