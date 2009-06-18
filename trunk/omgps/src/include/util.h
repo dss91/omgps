@@ -37,7 +37,7 @@ typedef struct __pthread_context_t
 #define DEBUG_UI_LOCK FALSE;
 
 #define LOCK_UI()	gdk_threads_enter()
-#define UNLOCK_UI()	gdk_threads_leave()
+#define UNLOCK_UI()	{ gdk_flush(); gdk_threads_leave(); }
 
 extern gboolean open_log(char *file_path);
 extern void close_log();

@@ -213,7 +213,6 @@ void map_front_download_callback_func(map_repo_t *repo, int zoom, int x, int y)
 		if (gdk_rectangle_intersect(&tile_rect, &view_rect, &area)) {
 			map_invalidate_pixbuf(&area, update_fg, update_bg, FALSE);
 			(*map_redraw_view_func)();
-			gdk_flush();
 		}
 	}
 

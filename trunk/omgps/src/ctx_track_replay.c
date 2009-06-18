@@ -246,8 +246,6 @@ static void replay_draw_lines()
 		g_view.fglayer.visible.x, g_view.fglayer.visible.y,
 		g_view.fglayer.visible.x, g_view.fglayer.visible.y,
 		g_view.fglayer.visible.width, g_view.fglayer.visible.height);
-
-	gdk_flush();
 }
 
 /**
@@ -357,8 +355,6 @@ static void replay_update_ui (int from, int to)
 	}
 
 	replay_update_progress_bar(record->time_offset);
-
-	gdk_flush();
 }
 
 /* make sure the UI lock is released when the thread is killed with SIGUSR1 */
