@@ -13,7 +13,7 @@ static char *track_file_name = NULL;
 static track_group_t *tracks = NULL;
 
 static GtkWidget *colorlist, *change_color_button, *new_track_button, *stop_track_button;
-static int current_color_idx = 0;
+static int cur_color_idx = 0;
 
 static GtkWidget *filelist_treeview, *filelist_treeview_sw;
 static GtkListStore *filelist_store = NULL;
@@ -23,8 +23,8 @@ static GtkWidget *replay_button, *delete_button, *export_gpx_button;
 static char *replay_file = NULL;
 static char *replay_file_path = NULL;
 
-static int previous_gps_tow = 0;
-static int first_gps_tow = 0;
+static U4 previous_gps_tow = 0u;
+static U4 first_gps_tow = 0u;
 
 static void add_file_to_list(GtkTreeIter *iter, char *filepath, char *filename);
 
@@ -100,7 +100,7 @@ int track_save(gboolean all, gboolean _free)
 
 	count = all? tracks->count : tracks->count / 3;
 	for (i=0; i<count; i++) {
-		fprintf(fp, "%lf\t%lf\t%d\n", tracks->tps[i].wgs84.lat,
+		fprintf(fp, "%lf\t%lf\t%u\n", tracks->tps[i].wgs84.lat,
 			tracks->tps[i].wgs84.lon, tracks->tps[i].time_offset);
 	}
 
@@ -169,8 +169,8 @@ static gboolean track_init(gboolean create_recording_file_path)
 	tracks->starttime = 0;
 	tracks->last_drawn_index = 0;
 
-	previous_gps_tow = 0;
-	first_gps_tow = 0;
+	previous_gps_tow = (U4)0;
+	first_gps_tow = (U4)0;
 
 	if (create_recording_file_path) {
 		if (track_file_path)
@@ -227,7 +227,7 @@ void track_add(/*double lat, double lon, U4 gps_tow*/)
 	tp->wgs84.lat = g_gpsdata.lat;
 	tp->wgs84.lon = g_gpsdata.lon;
 	tp->id = tracks->total_count;
-	tp->time_offset = (g_gpsdata.llh_itow - first_gps_tow) / 1000;
+	tp->time_offset = (g_gpsdata.llh_itow - first_gps_tow) / (U4)1000;
 
 	previous_gps_tow = g_gpsdata.llh_itow;
 
@@ -384,24 +384,24 @@ static void track_colorlist_set_initial_color()
 	int idx = ID_COLOR_Blue;
 	gdk_gc_set_rgb_fg_color(g_context.track_gc, &g_base_colors[idx]);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(colorlist), idx);
-	current_color_idx = idx;
+	cur_color_idx = idx;
 }
 
 static void change_color_button_clicked(GtkWidget *widget, gpointer data)
 {
 	int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(colorlist));
-	if (idx == current_color_idx)
+	if (idx == cur_color_idx)
 		return;
 
-	current_color_idx = idx;
-	gdk_gc_set_rgb_fg_color(g_context.track_gc, &g_base_colors[current_color_idx]);
+	cur_color_idx = idx;
+	gdk_gc_set_rgb_fg_color(g_context.track_gc, &g_base_colors[cur_color_idx]);
 	/* when notebook changes to page 0, the view is redrawn automatically and
 	 * top layer is updated */
 }
 
 void track_tab_on_show ()
 {
-	gtk_combo_box_set_active(GTK_COMBO_BOX(colorlist), current_color_idx);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(colorlist), cur_color_idx);
 	gtk_widget_set_sensitive(replay_button, FALSE);
 	gtk_widget_set_sensitive(delete_button, FALSE);
 	gtk_widget_set_sensitive(export_gpx_button, FALSE);
@@ -419,7 +419,7 @@ void track_tab_on_show ()
 static void colorlist_changed (GtkComboBox *widget, gpointer user_data)
 {
 	int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(colorlist));
-	if (idx == current_color_idx)
+	if (idx == cur_color_idx)
 		return;
 	gtk_widget_set_sensitive(change_color_button, TRUE);
 }
@@ -539,7 +539,7 @@ static void export_gpx(char *file)
 	struct tm *tm = gmtime(&tt);
 
 	fprintf(fp_dest,
-		"<?xml version=\"1.0\"?><gpx version=\"1.1\" creator=\"omgps - http://code.google.com/p/omgps/\"\n "
+		"<?xml version=\"1.0\"?>\n<gpx version=\"1.1\" creator=\"omgps - http://code.google.com/p/omgps/\"\n "
 		"xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n "
 		"xmlns=\"http://www.topografix.com/GPX/1/1\"\n"
 		"xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n");
@@ -557,7 +557,7 @@ static void export_gpx(char *file)
 	fprintf(fp_dest, "<trkseg>\n");
 
 	while (TRUE) {
-		n = fscanf(fp_src, "%lf\t%lf\t%d\n", &lat, &lon, &time_offset);
+		n = fscanf(fp_src, "%lf\t%lf\t%u\n", &lat, &lon, &time_offset);
 		if (n == EOF)
 			break;
 		else if (n != 3) {
@@ -746,7 +746,7 @@ GtkWidget * track_tab_create()
 	gtk_misc_set_alignment(GTK_MISC(color_label), 0.0, 0.5);
 	gtk_box_pack_start (GTK_BOX(color_hbox), color_label, FALSE, FALSE, 5);
 
-	create_colorlist(color_hbox);
+	create_colorlist();
 	gtk_box_pack_start (GTK_BOX(color_hbox), colorlist, TRUE, TRUE, 5);
 
 	change_color_button = gtk_button_new_with_label("Change");

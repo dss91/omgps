@@ -171,6 +171,8 @@ void update_batch_dl_status()
 	}
 
 	UNLOCK_MUTEX(&(td->lock));
+
+	gdk_flush();
 }
 
 static void draw_rectangle(GdkRectangle *rect)

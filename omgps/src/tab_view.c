@@ -213,6 +213,7 @@ void map_front_download_callback_func(map_repo_t *repo, int zoom, int x, int y)
 		if (gdk_rectangle_intersect(&tile_rect, &view_rect, &area)) {
 			map_invalidate_pixbuf(&area, update_fg, update_bg, FALSE);
 			(*map_redraw_view_func)();
+			gdk_flush();
 		}
 	}
 
@@ -653,7 +654,8 @@ static gboolean drawing_area_expose_event (GtkWidget *widget, GdkEventExpose *ev
 void map_centralize()
 {
 	g_context.cursor_in_view = TRUE;
-	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Gray], TRUE);
+	/* NOTE: see also view_tab_create() */
+	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Red], TRUE);
 
 	if (ctx_tab_get_current_id() == CTX_ID_TRACK_REPLAY && g_context.map_view_frozen == TRUE) {
 		track_replay_centralize();
@@ -842,7 +844,8 @@ static void mouse_released(point_t point, guint time)
 		g_view.fglayer.repo->zoom, g_view.fglayer.repo);
 
 	g_context.cursor_in_view = FALSE;
-	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Black], TRUE);
+	GtkStyle *st = gtk_rc_get_style(center_button);
+	modify_button_color(GTK_BUTTON(center_button), &(st->fg[GTK_STATE_NORMAL]), TRUE);
 
 	map_invalidate_view(TRUE);
 }
@@ -948,7 +951,7 @@ GtkWidget * view_tab_create()
 	zoom_label = gtk_label_new("");
 	gtk_container_add (GTK_CONTAINER (topbox), zoom_label);
 
-	zoomout_button = new_toolbar_button(topbox, "-");
+	zoomout_button = new_toolbar_button(topbox, "--");
 	g_signal_connect (G_OBJECT (zoomout_button), "pressed",
 		G_CALLBACK (zoom_button_pressed), (gpointer)FALSE);
 	g_signal_connect (G_OBJECT (zoomout_button), "released",
@@ -957,7 +960,8 @@ GtkWidget * view_tab_create()
 	center_button = new_toolbar_button(topbox, "Center");
 	g_signal_connect (G_OBJECT (center_button), "clicked",
 		G_CALLBACK (center_button_clicked), NULL);
-	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Gray], TRUE);
+	/* NOTE: see also mouse_released() */
+	modify_button_color(GTK_BUTTON(center_button), &g_base_colors[ID_COLOR_Red], TRUE);
 
 	fullscreen_button = new_toolbar_button(topbox, "Full");
 	g_signal_connect (G_OBJECT (fullscreen_button), "clicked",

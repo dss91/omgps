@@ -269,7 +269,7 @@ static void create_treeview(GtkWidget *treeview, GtkWidget *treeview_sw, char *c
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *col;
 	/* hack! minimal screen width - scroll bar width - separators and borders */
-	int width = 400 / col_names_count;
+	int width = 450 / col_names_count;
 
 	int i;
 	for (i=0; i<col_names_count; i++) {
@@ -581,8 +581,9 @@ GtkWidget * nav_tab_create()
 
 	/* basic table */
 	basicinfo_table = create_basic_nav_table();
+	GtkWidget *basicinfo_sw = new_scrolled_window(basicinfo_table);
 	label = gtk_label_new("     Basic Nav    ");
-	gtk_notebook_append_page (GTK_NOTEBOOK (notebook), basicinfo_table, label);
+	gtk_notebook_append_page (GTK_NOTEBOOK (notebook), basicinfo_sw, label);
 
 	GtkWidget *svinfo_vbox = gtk_vbox_new(FALSE, 0);
 
