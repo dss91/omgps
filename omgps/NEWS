@@ -1,6 +1,16 @@
 changes:
 =============================================================
 
+0.1_20090618-3
+----------------
+1. bugfix: sometimes widgets does not display as expected:
+   (1) start/stop gps button text (2) and gpsfix tab on main view
+2. enhancement: make sure all GUI operations within non-main threads are end with gdk_flush()
+
+known issues:
+1. "toggled state" of toggle button does not well displayed due to SHR theme.
+2. bug #6 needs more test
+
 0.1_20090618-2
 ----------------
 1. bugfix: track's src read file fail, http://code.google.com/p/omgps/issues/detail?id=6
