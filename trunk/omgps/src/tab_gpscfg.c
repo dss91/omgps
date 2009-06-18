@@ -251,8 +251,6 @@ static gboolean change_platform_model_cmd(void *model_id)
 			}
 		}
 		gtk_label_set_text(GTK_LABEL(platmodel_cur_name), platmodel_names[platmodel_id]);
-		//sprintf(buf, "Change platform model: done.");
-		//info_dialog(buf);
 	} else {
 		sprintf(buf, "Change platform model: failed");
 		warn_dialog(buf);
