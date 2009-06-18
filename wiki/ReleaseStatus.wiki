@@ -8,6 +8,11 @@
       # "keep cursor in view" mode, button font color (gray) is not suitable on black bg.
       # fg/bg of scratch color buttons and center button broken, adjust and rewrite. 
 
+== known issues: ==
+   * bugfix #1 need more tests
+   * occasionally gpsfix tab does not show on main view -- you have to restart
+   * "toggled state" of toggle button does not well displayed due to SHR theme.
+
 = 0.1_20090618-1 =
 
    * bugfix: gpsfix tab does not show up 
