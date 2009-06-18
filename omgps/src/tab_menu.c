@@ -333,7 +333,7 @@ void switch_to_ctx_tab(CTX_ID_T ctx_id)
 	if (cur_ctx_id != CTX_ID_NONE)
 		gtk_widget_hide(g_ctx_containers[cur_ctx_id]);
 
-	if (ctx_id == CTX_ID_NONE)
+	if (ctx_id == CTX_ID_NONE || (ctx_id == CTX_ID_GPS_FIX && POLL_STATE_TEST(SUSPENDING)))
 		return;
 
 	map_toggle_menu_button(ctx_id == CTX_ID_GPS_FIX);

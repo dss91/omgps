@@ -14,6 +14,7 @@ changes:
               slightly adjust UI layouts by adding scrolled window, etc.
            3) "keep cursor in view" mode, button font color (gray) is not suitable on black bg.
            4) fg/bg of scratch color buttons and center button broken, adjust and rewrite. 
+4. defect: don't show gpsfix ctx tab on main view when GPS disconnected. 
 
 known issues:
 1. bugfix #1 need more tests
