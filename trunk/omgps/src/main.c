@@ -445,7 +445,7 @@ static void init(gboolean log2console)
 
 	g_init_status = SETTINGS_LOADED;
 
-	g_ubx_receiver_versions[0] = '\0';
+	//g_ubx_receiver_versions[0] = '\0';
 
 	g_view.fglayer.tile_cache = NULL;
 	g_view.fglayer.tile_cache = NULL;
