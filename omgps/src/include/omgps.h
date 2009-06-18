@@ -227,7 +227,7 @@ extern const char *		g_base_color_names[BASE_COLOR_COUNT];
 extern GdkColor 		g_base_colors[BASE_COLOR_COUNT];
 extern GdkPixbuf *		g_base_color_pixbufs[BASE_COLOR_COUNT];
 extern double			g_pixel_meters[MAX_ZOOM_LEVELS];
-extern char 			g_ubx_receiver_versions[64];
+//extern char 			g_ubx_receiver_versions[64];
 
 extern GtkWidget *		g_window;
 extern menu_item_t		g_menus[TAB_ID_MAX];
