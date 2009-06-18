@@ -1,3 +1,13 @@
+= 0.1_20090618-2 =
+
+   * bugfix: track's src read file fail, http://code.google.com/p/omgps/issues/detail?id=6, sometime track saves bad records. (not sure these issues are fixed, need more tests)
+   * bugfix: sound module does not read speed correctly when speed unit is not m/s
+   * defect: theme related (on latest SHR): 
+      # UI flush from non-main threads is extreme slow, force gdk_flush().
+      # unable to set "gtk-font-name" by gtk_rc_parse_string() any more, instead use gtk_settings_set_string_property(); slightly adjust UI layouts by adding scrolled window, etc.
+      # "keep cursor in view" mode, button font color (gray) is not suitable on black bg.
+      # fg/bg of scratch color buttons and center button broken, adjust and rewrite. 
+
 = 0.1_20090618-1 =
 
    * bugfix: gpsfix tab does not show up 
