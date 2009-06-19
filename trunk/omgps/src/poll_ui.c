@@ -532,7 +532,7 @@ GtkWidget * ctx_tab_gps_fix_create()
 	track_image = gtk_image_new_from_pixbuf(g_xpm_images[XPM_ID_TRACK_OFF].pixbuf);
 	gtk_box_pack_start(GTK_BOX (vbox), track_image, FALSE, FALSE, 0);
 
-	poll_engine_image = gtk_image_new_from_pixbuf(g_xpm_images[XPM_ID_POLLENGINE_UBX].pixbuf);
+	poll_engine_image = gtk_image_new();
 	gtk_box_pack_end(GTK_BOX (vbox), poll_engine_image, FALSE, FALSE, 0);
 
 	return hbox;
