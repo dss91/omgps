@@ -269,7 +269,7 @@ static void create_treeview(GtkWidget *treeview, GtkWidget *treeview_sw, char *c
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *col;
 	/* hack! minimal screen width - scroll bar width - separators and borders */
-	int width = 450 / col_names_count;
+	int width = 430 / col_names_count;
 
 	int i;
 	for (i=0; i<col_names_count; i++) {
@@ -478,8 +478,8 @@ static inline void update_nav_basic()
 	sprintf(labels_text[FIX_TYPE], "%s", fixtype_text[g_gpsdata.nav_status_fixtype]);
 
 	if (g_gpsdata.latlon_valid) {
-		sprintf(labels_text[LAT], "%lf (%c)", fabs(g_gpsdata.lat), (g_gpsdata.lat > 0? 'N' : 'S'));
-		sprintf(labels_text[LON], "%lf (%c)", fabs(g_gpsdata.lon), (g_gpsdata.lon > 0? 'E' : 'W'));
+		sprintf(labels_text[LAT], "%f (%c)", fabs(g_gpsdata.lat), (g_gpsdata.lat > 0? 'N' : 'S'));
+		sprintf(labels_text[LON], "%f (%c)", fabs(g_gpsdata.lon), (g_gpsdata.lon > 0? 'E' : 'W'));
 		sprintf(labels_text[HACC], "%.2f", g_gpsdata.hacc);
 	}
 

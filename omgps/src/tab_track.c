@@ -100,7 +100,7 @@ int track_save(gboolean all, gboolean _free)
 
 	count = all? tracks->count : tracks->count / 3;
 	for (i=0; i<count; i++) {
-		fprintf(fp, "%lf\t%lf\t%u\n", tracks->tps[i].wgs84.lat,
+		fprintf(fp, "%f\t%f\t%u\n", tracks->tps[i].wgs84.lat,
 			tracks->tps[i].wgs84.lon, tracks->tps[i].time_offset);
 	}
 
@@ -568,7 +568,7 @@ static void export_gpx(char *file)
 		tt = start_time + time_offset;
 		tm = gmtime(&tt);
 		strftime(tm_buf, sizeof(tm_buf), "%Y-%m-%dT%H:%M:%SZ", tm);
-		fprintf(fp_dest, "<trkpt lat=\"%lf\" lon=\"%lf\"><time>%s</time></trkpt>\n",
+		fprintf(fp_dest, "<trkpt lat=\"%f\" lon=\"%f\"><time>%s</time></trkpt>\n",
 				lat, lon, tm_buf);
 	}
 	fprintf(fp_dest, "</trkseg>\n</trk>\n</gpx>\n");

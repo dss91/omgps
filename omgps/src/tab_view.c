@@ -788,7 +788,7 @@ static inline void show_lat_lon(point_t point)
 	coord_t wgs84 = tilepixel_to_wgs84(point, g_view.fglayer.repo->zoom, g_view.fglayer.repo);
 
 	char buf[128];
-	snprintf(buf, sizeof(buf), "Clicked on: lat=%lf, lon=%lf",
+	snprintf(buf, sizeof(buf), "Clicked on: lat=%f, lon=%f",
 		wgs84.lat, wgs84.lon);
 	status_label_set_text(buf, TRUE);
 }

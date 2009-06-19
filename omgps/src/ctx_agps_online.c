@@ -417,7 +417,7 @@ static inline void show_lat_lon(point_t point)
 	point.y += g_view.fglayer.tl_pixel.y;
 	coord_t wgs84 = tilepixel_to_wgs84(point, g_view.fglayer.repo->zoom, g_view.fglayer.repo);
 	char buf[32];
-	snprintf(buf, sizeof(buf), "lat=%lf, lon=%lf", wgs84.lat, wgs84.lon);
+	snprintf(buf, sizeof(buf), "lat=%f, lon=%f", wgs84.lat, wgs84.lon);
 	status_label_set_text(buf, FALSE);
 }
 
