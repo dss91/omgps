@@ -1,2 +1,6 @@
    # how to set map dir other than default fixed ones?
-      * A: do soft link
+      * do soft link
+   # how to add new maps?
+      * see $HOME/.omgps/config_VERSION/map.py, NOTE: map must be of type "Spherical Mercator Map", like OSM.
+   # how to clear the status text at bottom of main view?
+      * click it
