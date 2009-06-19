@@ -5,11 +5,10 @@
 
 == known issues: ==
    * "toggled state" of toggle button does not well displayed due to SHR theme.
-   * bug #6 needs more test
+   * bug #6
 
 = 0.1_20090618-2 =
 
-   * bugfix: track's src read file fail, http://code.google.com/p/omgps/issues/detail?id=6, sometime track saves bad records. (not sure these issues are fixed, need more tests)
    * bugfix: sound module does not read speed correctly when speed unit is not m/s
    * defect: theme related (on latest SHR): 
       # UI flush from non-main threads is extreme slow, force gdk_flush().
@@ -18,7 +17,7 @@
       # fg/bg of scratch color buttons and center button broken, adjust and rewrite. 
 
 == known issues: ==
-   * bugfix #1 need more tests
+   * bug #6
    * occasionally gpsfix tab does not show on main view -- you have to restart
    * "toggled state" of toggle button does not well displayed due to SHR theme.
 
