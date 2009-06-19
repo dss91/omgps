@@ -288,17 +288,17 @@ cfg_t *settings_load()
 static void save_map_config(map_repo_t *repo, void *arg)
 {
 	FILE *fp = (FILE *)arg;
-	fprintf(fp, "%s%s = %s=%d; %s=%lf; %s=%lf\n", map_cfg_prefix, repo->name,
+	fprintf(fp, "%s%s = %s=%d; %s=%f; %s=%f\n", map_cfg_prefix, repo->name,
 			map_cfg_zoom, repo->zoom, map_cfg_lat_fix, repo->lat_fix, map_cfg_lon_fix, repo->lon_fix);
 }
 
 static void save_cfg(FILE *fp)
 {
 	fprintf(fp, key_last_map_name" = %s\n", g_view.fglayer.repo->name);
-	fprintf(fp, key_last_center_lat" = %lf\n", cfg.last_center_lat);
-	fprintf(fp, key_last_center_lon" = %lf\n", cfg.last_center_lon);
-	fprintf(fp, key_last_lat" = %lf\n", cfg.last_lat);
-	fprintf(fp, key_last_lon" = %lf\n", cfg.last_lon);
+	fprintf(fp, key_last_center_lat" = %f\n", cfg.last_center_lat);
+	fprintf(fp, key_last_center_lon" = %f\n", cfg.last_center_lon);
+	fprintf(fp, key_last_lat" = %f\n", cfg.last_lat);
+	fprintf(fp, key_last_lon" = %f\n", cfg.last_lon);
 	fprintf(fp, key_last_alt" = %f\n", cfg.last_alt);
 	fprintf(fp, key_last_pacc" = %f\n", cfg.last_pacc);
 	fprintf(fp, key_agps_user" = %s\n", cfg.agps_user == NULL? "" : cfg.agps_user);
