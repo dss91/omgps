@@ -585,8 +585,7 @@ END:
 		unlink(fullpath);
 	else {
 		char buf[256];
-		snprintf(buf, sizeof(buf), "The .gpx file was exported to: %s\n\n"
-			"You can help OSM with track data.", fullpath);
+		snprintf(buf, sizeof(buf), "The .gpx file was exported as: %s", fullpath);
 		info_dialog(buf);
 	}
 }
