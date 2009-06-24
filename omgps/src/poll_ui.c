@@ -325,8 +325,7 @@ static gboolean nav_da_expose_event (GtkWidget *widget, GdkEventExpose *evt, gpo
 }
 
 /**
- * Called by polling thread on each poll_suspending
- * Use global data <g_csd>
+ * Called by polling thread on each poll.
  */
 void poll_update_ui()
 {
