@@ -240,7 +240,6 @@ static inline void update_svinfo()
 }
 
 /* Waste CPU! */
-/*
 static void svinfo_treeview_func_text(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *model,
 	GtkTreeIter *iter, gpointer data)
 {
@@ -251,7 +250,6 @@ static void svinfo_treeview_func_text(GtkTreeViewColumn *tree_column, GtkCellRen
 	else
 		g_object_set(cell, "foreground-set", FALSE, NULL);
 }
-*/
 
 static void create_treeview(GtkWidget *treeview, GtkWidget *treeview_sw, char *col_names[],
 		int col_names_count)
@@ -278,7 +276,7 @@ static void create_treeview(GtkWidget *treeview, GtkWidget *treeview_sw, char *c
 	  	gtk_tree_view_column_set_sizing (col, GTK_TREE_VIEW_COLUMN_FIXED);
 	  	gtk_tree_view_column_set_fixed_width(col, width);
 		gtk_tree_view_column_set_clickable(col, FALSE);
-		//gtk_tree_view_column_set_cell_data_func (col, renderer, svinfo_treeview_func_text, NULL, NULL);
+		gtk_tree_view_column_set_cell_data_func (col, renderer, svinfo_treeview_func_text, NULL, NULL);
 		gtk_tree_view_append_column (GTK_TREE_VIEW(treeview), col);
 	}
 }
