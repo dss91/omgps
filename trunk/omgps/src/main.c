@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/file.h>
 #include <dirent.h>
+#include <locale.h>
 
 #include "omgps.h"
 #include "network.h"
@@ -255,16 +256,17 @@ static void create_dirs()
  */
 static void link_config_files()
 {
-	#ifndef ETCCONF_DIR
-	#define ETCCONF_DIR "/etc/"PACKAGE/VERSION
+	#ifndef CONF_DIR
+	#define CONF_DIR "/etc/omgps"
 	#endif
 
 	char buf[256], buf1[256];
 	struct stat st;
 	struct dirent *ep;
 	char *fname;
+	char *dir = CONF_DIR"/"VERSION;
 
-	DIR *dp = opendir (ETCCONF_DIR);
+	DIR *dp = opendir (dir);
 
 	if (dp == NULL) {
 		warn_dialog("unable to list files in config dir");
@@ -282,7 +284,7 @@ static void link_config_files()
 		if (stat(buf, &st) == 0 && ep->d_type != DT_DIR)
 			continue;
 
-		snprintf(buf1, sizeof(buf1), "%s/%s", ETCCONF_DIR, fname);
+		snprintf(buf1, sizeof(buf1), "%s/%s", dir, fname);
 		symlink(buf1, buf);
 	}
 }
@@ -414,6 +416,8 @@ static void init(gboolean log2console)
 	atexit(atexit_handler);
 
 	umask(066);
+	/* NOTE: related to bug# 6 */
+	setlocale(LC_ALL, "C");
 
 	/* create dirs if not exists, save as strings */
 	create_dirs();
