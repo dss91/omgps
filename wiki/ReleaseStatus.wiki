@@ -1,3 +1,10 @@
+= 0.1-r0 (20090625) =
+
+   * bugfix: bug #6
+   * minor UI update
+   * explicitly enable SBAS again
+   * source: can be built with openembedded.org bitbake (tested under SHR-unstable bb repository)
+
 = 0.1_20090618-3 =
 
    * bugfix: sometimes widgets does not display as expected: (1) start/stop gps button text (2) and gpsfix tab on main view
