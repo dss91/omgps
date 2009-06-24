@@ -7,6 +7,6 @@ PRIORITY = "optional"
 PACKAGES = "${PN}-dbg ${PN}"
 PV = "0.1+svnr${SRCREV}"
 S = "${WORKDIR}/${PN}"
-SRC_URI = "svn://omgps.googlecode.com/svn/trunk/;module=omgps;proto=http"
+SRC_URI = "svn://omgps.googlecode.com/svn/;module=trunk;proto=http"
 
 inherit autotools
