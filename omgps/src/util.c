@@ -201,7 +201,7 @@ gboolean validate_email(char *email)
 	const char *regex = "^" CH "+@(" CH "+\\.)+" CH "{2,}$";
 
 	regex_t preg;
-	/* should pass the compilaton. error can be detected during dev phase.
+	/* should pass the compilation. error can be detected during dev phase.
 	 * performance is not a consideration */
 	assert(regcomp(&preg, regex, REG_EXTENDED|REG_ICASE|REG_NOSUB) == 0);
 
