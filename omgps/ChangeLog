@@ -1,0 +1,46 @@
+changes:
+=============================================================
+0.1_20090625-r0
+----------------
+1. bugfix: bug #6
+2. minor UI update
+3. explicitly enable SBAS again
+4. can be built with openembedded.org bitbake (tested under SHR-unstable bb repository)
+
+0.1_20090618-3
+----------------
+1. bugfix: sometimes widgets does not display as expected:
+   (1) start/stop gps button text (2) and gpsfix tab on main view
+2. enhancement: make sure all GUI operations within non-main threads are end with gdk_flush()
+
+known issues:
+1. "toggled state" of toggle button does not well displayed due to SHR theme.
+2. bug #6
+
+0.1_20090618-2
+----------------
+1. bugfix: track's src read file fail, http://code.google.com/p/omgps/issues/detail?id=6
+           sometime track saves bad records.
+           (not sure these issues are fixed, need more tests)
+2. bugfix: sound module does not read speed correctly when speed unit is not m/s
+3. defect: theme related (on latest SHR): 
+           1) UI flush from non-main threads is extreme slow, force gdk_flush().
+           2) unable to set "gtk-font-name" by gtk_rc_parse_string() any more, instead 
+              use gtk_settings_set_string_property();
+              slightly adjust UI layouts by adding scrolled window, etc.
+           3) "keep cursor in view" mode, button font color (gray) is not suitable on black bg.
+           4) fg/bg of scratch color buttons and center button broken, adjust and rewrite. 
+4. defect: don't show gpsfix ctx tab on main view when GPS disconnected. 
+
+known issues:
+1. bugfix #1 need more tests
+2. occasionally gpsfix tab does not show on main view -- you have to restart
+3. "toggled state" of toggle button does not well displayed due to SHR theme.
+
+0.1_20090618-1
+----------------
+
+1. bugfix: gpsfix tab does not show up 
+2. bugfix: too much records inserted into track file list while tracking
+3. defect: track strange sorting, http://code.google.com/p/omgps/issues/detail?id=5
+4. defect: scratch sorting
