@@ -3,5 +3,5 @@
   * Layer manager -- make it easy to integrate other layers, such as POI, openBMap data.
 
 = version 0.1 (20090625): =
-  * Updater -- detect new package releases
+  * ~~ Updater -- detect new package releases ~~
   * Fix all known bugs
