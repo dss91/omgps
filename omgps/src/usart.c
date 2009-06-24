@@ -308,15 +308,8 @@ gboolean usart_init()
 	if (! ubx_cfg_msg_nmea_std(0x0, TRUE, TRUE))
 		return FALSE;
 
-	//if (! ubx_cfg_sbas(TRUE, TRUE))
-	//	return FALSE;
-
-	//if (! ubx_cfg_rxm(0x3, 0x0, TRUE))
-	//	return FALSE;
-
-	/* dynamic platform model */
-	//if (! ubx_cfg_nav2(0x2, TRUE))
-	//	return FALSE;
+	if (! ubx_cfg_sbas(TRUE, TRUE))
+		return FALSE;
 
 	show_status("Set initial AID data...");
 
