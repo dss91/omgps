@@ -1,40 +1,39 @@
 ############ resources ######################
 
-confdir = $(sysconfdir)/$(PACKAGE)/$(VERSION)
+confdir = $(sysconfdir)/omgps
 dist_conf_DATA = data/etc/*.*
 
 EXTRA_DIST = $(dist_conf_DATA)
 
 desktopdir = $(datadir)/applications
-dist_desktop_DATA = data/$(PACKAGE).desktop
+dist_desktop_DATA = data/omgps.desktop
 
-appicondir = $(datadir)/pixmaps/$(PACKAGE)
-dist_appicon_DATA = data/$(PACKAGE).png data/sky.png
+appicondir = $(datadir)/pixmaps/omgps
+dist_appicon_DATA = data/omgps.png data/sky.png
 
 ############ source files ###################
 
-#
 # FIXME: detect version automatically
-#
+PY_VERSION = 2.6
 
-python_version = 2.6
-python_include = $(LIBTOOL_SYSROOT_PATH)/usr/include/python$(python_version)/
-python_link = python$(python_version)
+# If not bitbake, set STAGING_DIR as LIBTOOL_SYSROOT_PATH for normal cross compiling.
+OPIEDIR ?= /usr/local/openmoko/arm/arm-angstrom-linux-gnueabi/
+PY_INC_DIR = $(OPIEDIR)/usr/include/python$(PY_VERSION)/
 
-bin_PROGRAMS = omgps omgps_debug
+bin_PROGRAMS = omgps
 
-common_CFLAGS = -Wall -Werror       \ 
-  -L$(LIBTOOL_SYSROOT_PATH)/usr/lib	\
-  -I$(top_srcdir)/src       		\
-  -I$(top_srcdir)/src/include  		\
-  -I$(python_include)               \
-  -DETCCONF_DIR=\"$(confdir)\"		\
+common_CFLAGS = -Wall -Werror       \
+  -I$(PY_INC_DIR)                   \
+  -I$(top_srcdir)/src               \
+  -I$(top_srcdir)/src/include       \
+  -DCONF_DIR=\"$(confdir)\"         \
   -DICONDIR=\"$(appicondir)\"       \
   -D_GNU_SOURCE                     \
   @DEPENDENCIES_CFLAGS@
 
 omgps_CFLAGS = $(common_CFLAGS) -O2
-omgps_LDADD = @DEPENDENCIES_LIBS@ -l$(python_link)
+omgps_LDFLAGS = 
+omgps_LDADD = @DEPENDENCIES_LIBS@ -lpython$(PY_VERSION)
 
 omgps_SOURCES =          \
   src/ctx_agps_online.c  \
@@ -71,7 +70,3 @@ omgps_SOURCES =          \
   src/usart.c            \
   src/wgs84.c            \
   src/xpm_image.c
-
-omgps_debug_CFLAGS = $(common_CFLAGS) -g
-omgps_debug_SOURCES = $(omgps_SOURCES)  
-omgps_debug_LDADD = $(omgps_LDADD)
