@@ -1,6 +1,6 @@
 ############ resources ######################
 
-confdir = $(sysconfdir)/omgps
+confdir = $(sysconfdir)/omgps/${VERSION}
 dist_conf_DATA = data/etc/*.*
 
 EXTRA_DIST = $(dist_conf_DATA)
