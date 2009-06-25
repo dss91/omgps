@@ -257,14 +257,14 @@ static void create_dirs()
 static void link_config_files()
 {
 	#ifndef CONF_DIR
-	#define CONF_DIR "/etc/omgps"
+	#define CONF_DIR "/etc/omgps/"VERSION
 	#endif
 
 	char buf[256], buf1[256];
 	struct stat st;
 	struct dirent *ep;
 	char *fname;
-	char *dir = CONF_DIR"/"VERSION;
+	char *dir = CONF_DIR;
 
 	DIR *dp = opendir (dir);
 
