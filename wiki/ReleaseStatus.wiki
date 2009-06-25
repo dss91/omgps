@@ -1,4 +1,4 @@
-= 0.1_svnr88 (20090625) =
+= 0.1_svnr90 (20090625) =
 
    * bugfix: bug #6
    * minor UI update
