@@ -4,3 +4,5 @@
       * see $HOME/.omgps/config_VERSION/map.py, NOTE: map must be of type "Spherical Mercator Map", like OSM.
    # how to clear the status text at bottom of main view?
       * click it
+   # ho to change zoom level quickly
+      * for example, from 17 to 10: press and hold button "+", you will see zoom level decreases every ~300 ms. release button when expected zoom level reaches.
