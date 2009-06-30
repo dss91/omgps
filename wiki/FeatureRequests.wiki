@@ -1,5 +1,3 @@
-= Feature Requests =
-
 Collected from openmoko mailing list for v0.2 and later.
 
 = Initial mail =
