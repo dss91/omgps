@@ -30,6 +30,8 @@ mqy, 2009-06-30 08:30 am (CST)
       * Big buttons to mark 'paved road starts', '80km/h speed limit starts', 'crossroads', 'bridge' etc.
     # Davide: 
       * upload data to OSM
+    # onen:
+      * edit GPX track, cut private or garbage parts. 
   * track:
     # nuk (from opkg.org comment): 
       * add altitude to track log
