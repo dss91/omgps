@@ -57,3 +57,5 @@ mqy, 2009-06-30 08:30 am (CST)
       * should avoid low render speed
     # rusolis: 
       * use the navit engine (for example) for routing using the vector data from OSM, and then display that on top of the png maps in omgps. 
+ * misc:
+    # Laszlo: archived repository
