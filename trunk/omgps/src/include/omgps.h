@@ -26,6 +26,8 @@
  * else that map must be totally useless */
 #define MAX_LAT_LON_FIX		0.1
 
+#define HOME_PAGE			"http://omgps.googlecode.com/"
+
 typedef enum {
 	SETTINGS_LOADED,
 	DOWNLOADER_INITED,
