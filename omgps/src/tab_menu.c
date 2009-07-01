@@ -149,7 +149,7 @@ GtkWidget * menu_tab_create()
 
 	gtk_box_pack_start (GTK_BOX (vbox), table, FALSE, FALSE, 0);
 
-	GtkWidget *site_label = gtk_label_new("http://omgps.googlecode.com/");
+	GtkWidget *site_label = gtk_label_new(HOME_PAGE);
 	gtk_label_set_selectable(GTK_LABEL(site_label), FALSE);
 	gtk_widget_modify_fg(site_label, GTK_STATE_NORMAL, &g_base_colors[ID_COLOR_White]);
 	gtk_misc_set_alignment(GTK_MISC(site_label), 0.5, 0);
