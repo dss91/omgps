@@ -43,6 +43,7 @@ mqy, 2009-06-30
       * make track replay rewindable
     # Risto H. Kurppa: 
       * change the frequency of saving the location
+      * analyze GPS track on-the-fly: show the speed vs. time plot.
     # Christian Rüb: 
       * split a track from the main screen. This makes it easier for later OSM editing.
   * UI:
