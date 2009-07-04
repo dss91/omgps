@@ -14,7 +14,7 @@ Because version 0.1 gets stable for now, and it will be integrated into official
 
 Requirement of version 0.2 will be frozen due 07-07, the core task is to make it track-friendly for OSM map and JOMS application. Please feel free to comment or add new feature requests here. 
 
-mqy, 2009-06-30 08:30 am (CST)
+mqy, 2009-06-30
 
 = Replies summary =
 
@@ -32,6 +32,8 @@ mqy, 2009-06-30 08:30 am (CST)
       * upload data to OSM
     # onen:
       * edit GPX track, cut private or garbage parts. 
+    # Helge Hafting:
+      * GPX comments
   * track:
     # nuk (from opkg.org comment): 
       * add altitude to track log
