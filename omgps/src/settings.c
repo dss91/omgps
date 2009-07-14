@@ -250,7 +250,7 @@ cfg_t *settings_load()
 	char *errbuf = thread_context_get_errbuf();
 
 	if (stat(settings_file, &st) == 0) {
-		if ((fd = open(settings_file, O_RDWR)) <= 0) {
+		if ((fd = open(settings_file, O_RDWR, 0644)) <= 0) {
 			log_error("open settings file failed, error=%s", strerror(errno));
 			snprintf(errbuf, ERRBUF_LEN, "open settings file failed: %s", settings_file);
 		}

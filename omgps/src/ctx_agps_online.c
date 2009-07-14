@@ -10,7 +10,7 @@
 #include "network.h"
 #include "customized.h"
 #include "util.h"
-#include "usart.h"
+#include "uart.h"
 #include "gps.h"
 #include "omgps.h"
 
@@ -146,7 +146,7 @@ static gboolean set_aid_data(char *file, int size)
 		return FALSE;
 	}
 
-	fd = open(file, O_RDONLY);
+	fd = open(file, O_RDONLY, 0644);
 	if (fd < 0) {
 		ret = FALSE;
 		goto END;
@@ -259,7 +259,7 @@ static gboolean dump_aid_data(aid_args_t *args)
 	snprintf(tmp, sizeof(tmp), "%s.tmp", args->file);
 
 	if (counter > 0) {
-		fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC);
+		fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd > 0) {
 			write_len = 0;
 			while ((n = write(fd, &buf[write_len], total_len - write_len)) > 0)
@@ -296,7 +296,7 @@ gboolean agps_dump_aid_data(gboolean agps_online)
 	get_aid_file_names();
 
 	/* avoid garbage */
-	usart_flush_output();
+	uart_flush_output();
 
 	gboolean ret = FALSE;
 
@@ -338,8 +338,8 @@ gboolean agps_dump_aid_data(gboolean agps_online)
 		log_info("Dump AID data: failed");
 	}
 
-	if (! g_context.usart_conflict)
-		usart_flush_output();
+	if (! g_context.uart_conflict)
+		uart_flush_output();
 
 	return ret;
 }
@@ -632,9 +632,9 @@ static gboolean agps_online_cmd(void *_args)
 
 	int gps_dev_fd = 0;
 	if (! is_ubx) {
-		if ((gps_dev_fd = usart_open((U4)BAUD_RATE, FALSE)) <= 0) {
+		if ((gps_dev_fd = uart_open((U4)BAUD_RATE, FALSE)) <= 0) {
 			LOCK_UI();
-			status_label_set_text("AGPS online: Open USART failed", FALSE);
+			status_label_set_text("AGPS online: Open UART failed", FALSE);
 			UNLOCK_UI();
 			ret = FALSE;
 			goto END;

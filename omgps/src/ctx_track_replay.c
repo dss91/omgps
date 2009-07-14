@@ -248,6 +248,25 @@ static void replay_draw_lines()
 		g_view.fglayer.visible.width, g_view.fglayer.visible.height);
 }
 
+static void draw_current_position()
+{
+	if (! g_gpsdata.latlon_valid)
+		return;
+
+	coord_t wgs84 = {g_gpsdata.lat, g_gpsdata.lon};
+
+	point_t pos_pixel = wgs84_to_tilepixel(wgs84, last_zoom, last_repo);
+	int x = pos_pixel.x - g_view.fglayer.tl_pixel.x;
+	int y = pos_pixel.y - g_view.fglayer.tl_pixel.y;
+
+	#define XPM_SIZE		32
+	#define XPM_SIZE_HALF	16
+
+	gdk_draw_pixbuf (g_view.da->window, g_context.track_gc, g_xpm_images[XPM_ID_POSITION_VALID].pixbuf,
+		0, 0, x - XPM_SIZE_HALF, y - XPM_SIZE_HALF, XPM_SIZE, XPM_SIZE,
+		GDK_RGB_DITHER_NONE, -1, -1);
+}
+
 /**
  * track replay, also being called by map_invalidate_view()
  */
@@ -260,6 +279,9 @@ static void replay_redraw_view()
 	replay_draw_lines();
 
 	replay_draw_flag(last_point);
+
+	/* draw current position */
+	draw_current_position();
 }
 
 static void replay_update_ui_helper(gboolean prepare)
@@ -467,6 +489,9 @@ static void *replay_routine()
 		}
 
 		last_draw_idx = end_idx;
+
+		/* draw current position */
+		draw_current_position();
 
 STOP:
 
