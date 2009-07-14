@@ -10,7 +10,7 @@
 #include "network.h"
 #include "omgps.h"
 #include "util.h"
-#include "usart.h"
+#include "uart.h"
 #include "customized.h"
 
 static GtkWidget *user_entry, *pwd_entry, *pwd_entry_again;
@@ -145,8 +145,8 @@ static gboolean reset_gps_cmd(void *_reset_type)
 	 * ubx means: it is called by non-main thread, need UI lock */
 	gboolean is_ubx = POLL_ENGINE_TEST(UBX);
 	if (! is_ubx) {
-		if ((gps_dev_fd = usart_open((U4)BAUD_RATE, FALSE)) <= 0) {
-			warn_dialog("Open USART failed");
+		if ((gps_dev_fd = uart_open((U4)BAUD_RATE, FALSE)) <= 0) {
+			warn_dialog("Open UART failed");
 			return FALSE;
 		}
 		ubx_init(gps_dev_fd);
@@ -229,8 +229,8 @@ static gboolean change_platform_model_cmd(void *model_id)
 	 * ubx means: it is called by non-main thread, need UI lock */
 	gboolean is_ubx = POLL_ENGINE_TEST(UBX);
 	if (! is_ubx) {
-		if ((gps_dev_fd = usart_open((U4)BAUD_RATE, FALSE)) <= 0) {
-			warn_dialog("Open USART failed");
+		if ((gps_dev_fd = uart_open((U4)BAUD_RATE, FALSE)) <= 0) {
+			warn_dialog("Open UART failed");
 			return FALSE;
 		}
 		ubx_init(gps_dev_fd);

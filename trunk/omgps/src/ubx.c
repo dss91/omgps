@@ -4,7 +4,7 @@
 #include "gps.h"
 #include "ubx.h"
 #include "util.h"
-#include "usart.h"
+#include "uart.h"
 
 static int gps_dev_fd;
 
@@ -31,7 +31,7 @@ gboolean ubx_send_request(U1 *buf, int size)
 {
 	int written = 0;
 	while (TRUE) {
-		if ((written = write(gps_dev_fd, &buf[written], size)) <= 0)
+		if ((written = write_with_timeout(&buf[written], size)) <= 0)
 			return FALSE;
 		size -= written;
 		if (size == 0)
@@ -39,8 +39,6 @@ gboolean ubx_send_request(U1 *buf, int size)
 		buf += written;
 	}
 	tcdrain(gps_dev_fd);
-
-	sleep_ms(200);
 
 	return TRUE;
 }
@@ -68,8 +66,8 @@ static gboolean ubx_read_header(U1 *buf, int next_len)
 	int ret;
 
 	while (1) {
-		if ((ret = read(gps_dev_fd, &c, 1)) != 1) {
-			usart_flush_output();
+		if ((ret = read_with_timeout(&c, 1)) != 1) {
+			uart_flush_output();
 			return FALSE;
 		}
 
@@ -114,7 +112,7 @@ gboolean ubx_read_ack(const ubx_msg_type_t *expected_type)
 		ack_buf[4] != expected_type->class || ack_buf[5] != expected_type->id) {
 		log_warn("bad ack: %02X, %02X, %02X, %02X, %02X, %02X",
 			ack_buf[0], ack_buf[1], ack_buf[2], ack_buf[3], ack_buf[4], ack_buf[5]);
-		usart_flush_output();
+		uart_flush_output();
 		return FALSE;
 	}
 
@@ -148,7 +146,7 @@ gboolean ubx_read_next_msg(ubx_msg_t *msg, const ubx_msg_type_t *expected_type)
 	if (expected_type != NULL && (msg->class != expected_type->class || msg->id != expected_type->id)) {
 		log_warn("bad message type: expected {0x%02x, 0x%02x}, but get {0x%02x, 0x%02x}",
 			expected_type->class, expected_type->id, msg->class, msg->id);
-		usart_flush_output();
+		uart_flush_output();
 		return FALSE;
 	}
 
@@ -803,14 +801,14 @@ gboolean ubx_poll_group(gboolean pollsv)
 	int written = 0;
 
 	for (; size > 0; size-= written) {
-		if ((written = write(gps_dev_fd, &poll_packet[written], size)) <= 0) {
+		if ((written = write_with_timeout(&poll_packet[written], size)) <= 0) {
 			log_warn("UBX poll: write device failed");
 			return FALSE;
 		}
 	}
 	tcdrain(gps_dev_fd);
 
-	sleep_ms(SEND_RATE);
+	//sleep_ms(SEND_RATE);
 
 	gboolean has_failure = FALSE;
 	for (i=0; i<count; i++) {

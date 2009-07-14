@@ -926,6 +926,9 @@ gboolean status_label_clicked(GtkWidget *widget, GdkEventButton *event, gpointer
 GtkWidget * view_tab_create()
 {
 	g_view.da = drawingarea = gtk_drawing_area_new();
+    gtk_widget_set_app_paintable(drawingarea, TRUE);
+    gtk_widget_set_double_buffered(drawingarea, FALSE);
+
 	gtk_widget_set_events (drawingarea, drawingarea_event_masks);
 	drawingarea_init_mouse_handler(drawingarea, drawingarea_event_masks);
 

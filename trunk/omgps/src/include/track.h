@@ -20,6 +20,8 @@ typedef struct __trackpoint_t
 	/* without position fix */
 	coord_t wgs84;
 
+	float height;
+
 	/* time offset to start time, second.
 	 * This means the minimal GPS fetch interval is limited to 1 second */
 	U4 time_offset;

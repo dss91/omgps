@@ -14,7 +14,7 @@
 #include "sound.h"
 #include "gps.h"
 #include "util.h"
-#include "usart.h"
+#include "uart.h"
 #include "py_ext.h"
 #include "customized.h"
 #include "track.h"
@@ -58,6 +58,7 @@ static void cleanup()
 		goto END;
 
 #if (PLATFORM_FSO)
+	track_cleanup();
 	stop_poll_thread();
 #endif
 
@@ -68,10 +69,6 @@ static void cleanup()
 		map_cleanup();
 
 		drawing_cleanup();
-
-#if (PLATFORM_FSO)
-		track_cleanup();
-#endif
 
 		g_cfg->last_center_lat = g_view.center_wgs84.lat;
 		g_cfg->last_center_lon = g_view.center_wgs84.lon;
@@ -110,6 +107,7 @@ END:
 	if (pid_fd > 0) {
 		flock(pid_fd, LOCK_UN);
 		close(pid_fd);
+		unlink(pid_file);
 		pid_fd = 0;
 	}
 
@@ -170,7 +168,7 @@ static void sig_handler(int signo)
 				(*cleanup_func)(ctx);
 			}
 		}
-		warn_dialog("program crashed, exit");
+		warn_dialog("program crash, exit");
 		exit(0);
 	}
 
@@ -191,7 +189,7 @@ void install_sig_handler(void sig_handler(int signo))
 	struct sigaction act;
 	act.sa_handler = sig_handler;
 	sigemptyset(&act.sa_mask);
-	act.sa_flags = 0;
+	act.sa_flags = SA_RESTART;
 
 	sigaction(SIGINT, &act, NULL);
 	sigaction(SIGABRT, &act, NULL);
@@ -206,7 +204,6 @@ static void atexit_handler()
 	cleanup();
 	exit(0);
 }
-
 
 static void create_dir(const char *parent_dir, const char *dir, char **target)
 {
@@ -296,7 +293,7 @@ static void create_pid_file()
 
 	snprintf(pid_file, sizeof(pid_file), "%s/omgps.pid", g_context.top_dir);
 
-	int fd = open(pid_file, O_RDWR | O_CREAT);
+	int fd = open(pid_file, O_RDWR | O_CREAT, 0644);
 	if (fd < 0) {
 		err = "Unable to create pid file. exit.";
 		goto END;
@@ -382,25 +379,21 @@ static void load_map_and_settings()
 static void init_g_context_vars()
 {
 	g_view.invalidate = FALSE;
-
 	g_context.dl_if_absent = TRUE;
-
 	g_context.track_enabled = FALSE;
 	g_context.show_rulers = FALSE;
 	g_context.show_latlon_grid = FALSE;
-
-	g_context.poll_state = POLL_STATE_SUSPENDING;
-
+	g_context.uart_conflict = FALSE;
+	g_context.time_synced = FALSE;
+	g_context.map_view_frozen = FALSE;
 	g_context.fullscreen = FALSE;
-
 	g_context.sound_enabled = FALSE;
-
 	g_context.suspend_disabled = FALSE;
-
-	/* enable when center button is clicked, disable when after being dragged */
 	g_context.run_gps_on_start = TRUE;
+	/* enable when center button is clicked, disable when after being dragged */
 	g_context.cursor_in_view = TRUE;
 
+	g_context.poll_state = POLL_STATE_SUSPENDING;
 	g_context.speed_unit = SPEED_UNIT_KMPH;
 }
 
@@ -415,7 +408,6 @@ static void init(gboolean log2console)
 
 	atexit(atexit_handler);
 
-	umask(066);
 	/* NOTE: related to bug# 6 */
 	setlocale(LC_ALL, "C");
 
@@ -497,7 +489,8 @@ int main(int argc, char **argv)
 
 	g_type_init();
 
-	g_thread_init(NULL);
+	if (! g_thread_supported ())
+		g_thread_init(NULL);
 
 	gdk_threads_init();
 

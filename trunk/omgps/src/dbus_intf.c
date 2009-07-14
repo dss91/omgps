@@ -44,6 +44,7 @@ static gboolean stopping = FALSE;
 #define KNOTS_TO_MPS 				0.51444444
 
 static DBusGProxy *power_supply_proxy = NULL;
+static DBusGProxy *usage_proxy = NULL;
 static gboolean initialized = FALSE;
 static gboolean power_low = FALSE;
 
@@ -616,6 +617,33 @@ gboolean dbus_power_is_low()
 	return power_low;
 }
 
+/**
+ * The name of the action. Expected values are:
+ * - "suspend": The system is suspending.
+ * - "resume": The system has resumed.
+ * - "reboot": The system is rebooting.
+ * - "shutdown": The system is shutting down.
+ */
+static void system_action(DBusGProxy *proxy, const gchar *action, gpointer user_data)
+{
+	if (! action)
+		return;
+
+	if (! POLL_ENGINE_TEST(UBX))
+		return;
+
+	if ((strcmp(action, "SUSPEND") == 0) || (strcmp(action, "suspend") == 0)) {
+		if (POLL_STATE_TEST(RUNNING)) {
+			notify_poll_thread_suspend_resume();
+			do {
+				sleep(1);
+			} while (! POLL_STATE_TEST(SUSPENDING));
+		}
+	} else if ((strcmp(action, "RESUME") == 0) || (strcmp(action, "resume") == 0)) {
+		notify_poll_thread_suspend_resume();
+	}
+}
+
 static void dbus_connect_common_signals()
 {
 	/* power status */
@@ -624,6 +652,11 @@ static void dbus_connect_common_signals()
 	dbus_g_proxy_add_signal(power_supply_proxy, "PowerStatus", G_TYPE_STRING, G_TYPE_INVALID);
 	dbus_g_proxy_connect_signal(power_supply_proxy, "PowerStatus",
 		G_CALLBACK(power_status_changed), NULL, NULL);
+
+	if (! usage_proxy)
+		usage_proxy = dbus_g_proxy_new_for_name(connection, OUSAGED, USAGE_PATH, USAGE);
+	dbus_g_proxy_add_signal(usage_proxy, "SystemAction", G_TYPE_STRING, G_TYPE_INVALID);
+	dbus_g_proxy_connect_signal(usage_proxy, "SystemAction", G_CALLBACK(system_action), NULL, NULL);
 }
 
 static void dbus_disconnect_common_signals()
@@ -634,6 +667,12 @@ static void dbus_disconnect_common_signals()
 		g_object_unref(G_OBJECT(power_supply_proxy));
 		power_supply_proxy = NULL;
 	}
+
+	if (usage_proxy) {
+		dbus_g_proxy_disconnect_signal(usage_proxy, "SystemAction",	G_CALLBACK(system_action), NULL);
+		g_object_unref(G_OBJECT(usage_proxy));
+		usage_proxy = NULL;
+	}
 }
 
 static gboolean dbus_toggle_resource(const char *name, gboolean enable)
@@ -641,21 +680,15 @@ static gboolean dbus_toggle_resource(const char *name, gboolean enable)
 	if (! dbus_get_connection())
 		return FALSE;
 
-	DBusGProxy *proxy = dbus_g_proxy_new_for_name(connection, "org.freesmartphone.ousaged",
-			"/org/freesmartphone/Usage", "org.freesmartphone.Usage");
-
-	if (! proxy) {
-		log_warn("dbus_toggle_resource: failed to create proxy");
-		return FALSE;
-	}
-
 	char *method = enable ? "RequestResource" : "ReleaseResource";
 
 	GError *error = NULL;
 
-	gboolean ok = dbus_g_proxy_call_with_timeout(proxy, method, PROXY_CALL_TIMEOUT, &error,
+	if (! usage_proxy)
+		usage_proxy = dbus_g_proxy_new_for_name(connection, OUSAGED, USAGE_PATH, USAGE);
+
+	gboolean ok = dbus_g_proxy_call_with_timeout(usage_proxy, method, PROXY_CALL_TIMEOUT, &error,
 			G_TYPE_STRING, name, G_TYPE_INVALID, G_TYPE_INVALID);
-	g_object_unref(proxy);
 
 	if (! ok) {
 		log_warn("Request/Release resource: %s", error->message);

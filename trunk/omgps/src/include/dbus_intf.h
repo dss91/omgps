@@ -14,6 +14,10 @@
 #define DEVICE_PATH "/org/freesmartphone/Device"
 #define ODEVICED    "org.freesmartphone.odeviced"
 
+#define USAGE		"org.freesmartphone.Usage"
+#define USAGE_PATH	"/org/freesmartphone/Usage"
+#define OUSAGED		"org.freesmartphone.ousaged"
+
 /* ms */
 #define PROXY_CALL_TIMEOUT 5000
 

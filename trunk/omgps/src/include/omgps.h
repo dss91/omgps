@@ -120,8 +120,7 @@ typedef struct __context_t
 	poll_state_t poll_state;
 	poll_engine_t poll_engine;
 
-	gboolean usart_conflict;
-	gboolean gypsy_asynchronous;
+	gboolean uart_conflict;
 	gboolean time_synced;
 
 	gboolean fullscreen;

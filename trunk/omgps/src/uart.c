@@ -6,21 +6,25 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <sys/select.h>
+#include <sys/time.h>
 
 #include "omgps.h"
 #include "gps.h"
 #include "dbus_intf.h"
 #include "util.h"
 #include "ubx.h"
-#include "usart.h"
+#include "uart.h"
 #include "customized.h"
 
 static struct termios ttyset, ttyset_old;
 static int gps_dev_fd = -1;
 static int flags;
 static int fd_count;
+static struct timespec timeout;
+static fd_set rs, ws;
 
-#define TIMEOUT ((unsigned char)(20000 / SEND_RATE))
+#define TIMEOUT (SEND_RATE / 1000 + 5)
 
 /**
  * NOTE: these file paths are subject to change according to kernel and distribution.
@@ -30,10 +34,10 @@ static const char *sysfs_gps_power[] = {
 	"/sys/bus/platform/devices/neo1973-pm-gps.0/pwron"
 };
 
-static const char *gps_usart_file = "/dev/ttySAC1";
+static const char *gps_uart_file = "/dev/ttySAC1";
 
 /**
- * Check sysfs files(gps power, backlight power) and usart dev file
+ * Check sysfs files (gps power, uart device file)
  */
 gboolean check_device_files()
 {
@@ -54,10 +58,10 @@ gboolean check_device_files()
 		return FALSE;
 	}
 
-	/* GPS usart */
+	/* GPS uart */
 
-	if (stat(gps_usart_file, &st) < 0) {
-		warn_dialog("Dev file not found: GPS usart");
+	if (stat(gps_uart_file, &st) < 0) {
+		warn_dialog("Dev file not found: GPS uart");
 		return FALSE;
 	}
 
@@ -130,7 +134,7 @@ gboolean gps_device_power_on()
 {
 	log_info("Device is powered off, power on it...");
 
-	g_context.usart_conflict = FALSE;
+	g_context.uart_conflict = FALSE;
 
 	if (gps_dev_fd != -1) {
 		tcsetattr(gps_dev_fd, TCSANOW, &ttyset_old);
@@ -145,7 +149,46 @@ gboolean gps_device_power_on()
 
 	log_info("GPS chip is powered on");
 
-	return usart_init();
+	return uart_init();
+}
+
+/**
+ * select() may update the timeout argument to indicate how much time was left.
+ * pselect() does not change this argument.
+ * suspend/resume is the major reason that we use read/write with timeout.
+ */
+inline int read_with_timeout(U1 *buf, int len)
+{
+	FD_ZERO(&rs);
+	FD_SET(gps_dev_fd, &rs);
+	int ret = pselect(fd_count, &rs, NULL, NULL, &timeout, NULL);
+	if (ret <= 0) {
+		log_error("read UART failed: %s", ret == -1? strerror(errno) : "timeout");
+		return ret;
+	}
+
+	if (FD_ISSET(gps_dev_fd, &rs)) {
+		return read(gps_dev_fd, buf, len);
+	} else {
+		return -1;
+	}
+}
+
+inline int write_with_timeout(U1 *buf, int len)
+{
+	FD_ZERO(&ws);
+	FD_SET(gps_dev_fd, &ws);
+	int ret = pselect(fd_count, NULL, &ws, NULL, &timeout, NULL);
+	if (ret <= 0) {
+		log_error("write UART failed: %s", ret == -1? strerror(errno) : "timeout");
+		return ret;
+	}
+
+	if (FD_ISSET(gps_dev_fd, &ws)) {
+		return write(gps_dev_fd, buf, len);
+	} else {
+		return -1;
+	}
 }
 
 /*
@@ -156,12 +199,11 @@ gboolean inline read_fixed_len(U1 *buf, int expected_len)
 	int len = 0, count;
 
 	while (TRUE) {
-		count = read(gps_dev_fd, &buf[len], expected_len);
-		if (count == expected_len)
+		count = read_with_timeout(&buf[len], expected_len);
+		if (count == expected_len) {
 			return TRUE;
-
-		if (count <= 0) {
-			usart_flush_output();
+		} else if (count <= 0) {
+			uart_flush_output();
 			return FALSE;
 		} else {
 			len += count;
@@ -186,7 +228,7 @@ gboolean inline read_fixed_len(U1 *buf, int expected_len)
  * see also fifo(7). For a discussion of the effect of O_NONBLOCK in conjunction
  * with mandatory file locks and with file leases, see fcntl(2).
  */
-int usart_open(unsigned int baud_rate, gboolean verify_output)
+int uart_open(unsigned int baud_rate, gboolean verify_output)
 {
 	/* first open with non-blocking mode: we need
 	 * 1) if GPS chip is started just now, we must wait until it gets ready.
@@ -196,7 +238,10 @@ int usart_open(unsigned int baud_rate, gboolean verify_output)
 	if (verify_output)
 		flags |= O_NONBLOCK;
 
-	gps_dev_fd = open(gps_usart_file, flags);
+	if (gps_dev_fd > 0)
+		close(gps_dev_fd);
+
+	gps_dev_fd = open(gps_uart_file, flags);
 
 	if (gps_dev_fd < 0) {
 		log_error("open device failed: %s\n", strerror(errno));
@@ -205,7 +250,7 @@ int usart_open(unsigned int baud_rate, gboolean verify_output)
 
 	/* Save original terminal parameters */
 	if (tcgetattr(gps_dev_fd, &ttyset_old) != 0) {
-		log_error("get device attribute failed: %s", gps_usart_file);
+		log_error("get device attribute failed: %s", gps_uart_file);
 		return 0;
 	}
 
@@ -232,39 +277,42 @@ int usart_open(unsigned int baud_rate, gboolean verify_output)
 
 	memcpy(&ttyset, &ttyset_old, sizeof(ttyset));
 
-	ttyset.c_iflag = ttyset.c_oflag = ttyset.c_lflag = 0;
-	ttyset.c_cflag = CS8 | CLOCAL | CREAD;
-	ttyset.c_lflag &= ~(ICANON | ISIG | ECHO);
+	ttyset.c_iflag = ttyset.c_oflag = 0;
+	ttyset.c_cflag |= CS8 | CLOCAL | CREAD;
+	ttyset.c_lflag = ~(ICANON | ISIG | ECHO);
 
 	int i;
 	for (i = 0; i < NCCS; i++)
 		ttyset.c_cc[i] = -1;
 
-	ttyset.c_cc[VMIN] = 0;
+	ttyset.c_cc[VMIN] = 1;
 
 	/* unit: 1/10 second, max: 256
 	 * NOTE: this also means message send rate must <= 25 seconds. */
-	ttyset.c_cc[VTIME] = TIMEOUT;
+	ttyset.c_cc[VTIME] = (U1)(TIMEOUT * 10);
 
 	if (tcsetattr(gps_dev_fd, TCSANOW, &ttyset) != 0) {
-		log_error("Unable to set USART attribute: %s", strerror(errno));
+		log_error("Unable to set UART attribute: %s", strerror(errno));
 		return 0;
 	}
+
+	timeout.tv_sec = TIMEOUT; // NOTE
+	timeout.tv_nsec = 0;
 
 	fd_count = gps_dev_fd + 1;
 
 	if (verify_output) {
-		/* wait until USART has NMEA data output */
+		/* wait until UART has NMEA data output */
 		char c;
 		while (read(gps_dev_fd, &c, 1) < 0)
 			sleep_ms(100);
+	}
 
-		/* turn back to blocking mode */
-		flags &= ~O_NONBLOCK;
-		if (fcntl(gps_dev_fd, F_SETFL, flags) != 0) {
-			log_error("Unable to turn USART back to blocking mode: %s", strerror(errno));
-			return FALSE;
-		}
+	/* turn back to blocking mode */
+	flags &= ~O_NONBLOCK;
+	if (fcntl(gps_dev_fd, F_SETFL, flags) != 0) {
+		log_error("Unable to turn UART back to blocking mode: %s", strerror(errno));
+		return 0;
 	}
 
 	return gps_dev_fd;
@@ -282,14 +330,14 @@ static void show_status(char *msg)
  * baud_rate: only support [1,2,4,8] * 4800
  * called by polling thread!
  */
-gboolean usart_init()
+gboolean uart_init()
 {
-	log_info("USART init: message rate=%d ms, baud rate=%d...", SEND_RATE, BAUD_RATE);
+	log_info("UART init: message rate=%d ms, baud rate=%d...", SEND_RATE, BAUD_RATE);
 	show_status("Initializing GPS...");
 
-	/* open USART */
-	if (usart_open((U4)BAUD_RATE, TRUE) <= 0) {
-		log_error("Open USART failed");
+	/* open UART */
+	if (uart_open((U4)BAUD_RATE, TRUE) <= 0) {
+		log_error("Open UART failed");
 		return FALSE;
 	}
 
@@ -316,7 +364,7 @@ gboolean usart_init()
 	/* no matter success or failure */
 	set_initial_aid_data();
 
-	usart_flush_output();
+	uart_flush_output();
 
 	show_status("GPS was initialized.");
 
@@ -326,18 +374,18 @@ gboolean usart_init()
 	return TRUE;
 }
 
-void usart_close()
+void uart_close()
 {
 	close(gps_dev_fd);
 	gps_dev_fd = -1;
 }
 
-void usart_cleanup()
+void uart_cleanup()
 {
 	if (gps_dev_fd <= 0 || sysfs_get_gps_device_power() != 1)
 		return;
 
-	log_info("cleanup USART...");
+	log_info("cleanup UART...");
 
 	/* power off GPS */
 	sysfs_set_gps_device_power(FALSE);
@@ -347,10 +395,10 @@ void usart_cleanup()
 	close(gps_dev_fd);
 	gps_dev_fd = -1;
 
-	log_info("cleanup USART, done");
+	log_info("cleanup UART, done");
 }
 
-void usart_flush_output()
+void uart_flush_output()
 {
 	tcflush(gps_dev_fd, TCOFLUSH);
 
@@ -358,7 +406,7 @@ void usart_flush_output()
 
 	/* turn to non-blocking mode, consume (possible) ubx binary garbage */
 	if (fcntl(gps_dev_fd, F_SETFL, flags|O_NONBLOCK) != 0) {
-		log_error("sweep_garbage, change to blocking mode failed.");
+		log_error("sweep_garbage, change to non-blocking mode failed.");
 		return;
 	}
 
@@ -373,8 +421,8 @@ void usart_flush_output()
 		/* hack: lots of NMEA to read?
 		 * size of any UBX output block should <= 1K */
 		if (count > 1024) {
-			log_warn("Detect possible conflict on USART.");
-			g_context.usart_conflict = TRUE;
+			log_warn("Detect possible conflict on UART.");
+			g_context.uart_conflict = TRUE;
 			break;
 		}
 	}

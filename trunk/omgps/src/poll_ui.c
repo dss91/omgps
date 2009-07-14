@@ -459,6 +459,9 @@ void ctx_gpsfix_on_poll_state_changed()
 	last_rect_valid = FALSE;
 
 	if (POLL_STATE_TEST(STARTING)) {
+		int i;
+		for (i=0; i<3; i++)
+			nav_da_data[i].hash = nav_da_data[i].last_hash = INVALID_HASH;
 		switch_to_main_view(CTX_ID_GPS_FIX);
 	} else if (POLL_STATE_TEST(RUNNING)) {
 		if (ctx_tab_get_current_id() == CTX_ID_NONE)

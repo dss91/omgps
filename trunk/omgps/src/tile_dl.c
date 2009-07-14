@@ -86,7 +86,7 @@ static int download_tile(map_repo_t *repo, pthread_mutex_t *lock, dl_task_t *tas
 	/* NOTE: use temp file and rename, instead of override */
 	snprintf(buf, sizeof(buf), "%s.tmp", path);
 
-	int fd = open(buf, O_WRONLY | O_CREAT);
+	int fd = open(buf, O_WRONLY | O_CREAT, 0644);
 	if (fd < 0) {
 		err = "unable to open file";
 		goto END;

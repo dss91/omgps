@@ -6,7 +6,7 @@
 #include "gps.h"
 #include "ubx.h"
 #include "util.h"
-#include "usart.h"
+#include "uart.h"
 #include "customized.h"
 #include "track.h"
 
@@ -24,6 +24,7 @@ static gboolean ask_suspend = FALSE;
 
 typedef void (*gps_poll_func_t)(void);
 static gps_poll_func_t gps_poll_func = NULL;
+static pthread_context_t *ctx = NULL;
 
 static gps_data_t gdo;
 
@@ -51,6 +52,8 @@ static inline void on_new_record()
 
 void init_gpsdata(gps_data_t *gd)
 {
+	memset(gd, 0, sizeof(gps_data_t));
+
 	gd->latlon_valid = FALSE;
 	gd->height_valid = FALSE;
 	gd->vel_valid = FALSE;
@@ -75,7 +78,7 @@ void init_gpsdata(gps_data_t *gd)
 static inline gboolean check_pollsv() {
 	static int pollsv_counter = 0;
 
-	if (pollsv_counter >= 5) {
+	if (pollsv_counter >= 4) {
 		pollsv_counter = 0;
 		return TRUE;
 	} else {
@@ -148,7 +151,7 @@ gboolean issue_ctrl_cmd(ctrl_cmd_func_t cmd, void *args)
 static inline gboolean exec_ctrl_cmd()
 {
 	gboolean ok = (*ctrl_cmd) (ctrl_cmd_args);
-	usart_flush_output();
+	uart_flush_output();
 	ctrl_cmd = NULL;
 	ctrl_cmd_args = NULL;
 	return ok;
@@ -213,9 +216,11 @@ static void suspend_resume(gboolean skip_suspend)
 	if (g_context.track_enabled) {
 		LOCK_UI();
 		track_save(TRUE, FALSE);
-		g_context.track_enabled = FALSE;
 		UNLOCK_UI();
 	}
+
+	if (g_gpsdata.latlon_valid)
+		settings_save();
 
 SUSPEND:
 
@@ -363,25 +368,25 @@ static void switch_to_ogpsd()
 	/* hack! */
 	ubx_cfg_rate((U2)SEND_RATE, FALSE);
 
-	usart_close();
+	uart_close();
 
 	if (init_ogpsd_service()) {
-		g_context.usart_conflict = FALSE;
+		g_context.uart_conflict = FALSE;
 		set_poll_engine(POLL_ENGINE_OGPSD);
 
 		LOCK_UI();
 		menu_tab_on_show();
-		status_label_set_text("USART conflict, switched to ogpsd.", FALSE);
+		status_label_set_text("UART conflict, switched to ogpsd.", FALSE);
 		UNLOCK_UI();
 	} else {
 		LOCK_UI();
-		status_label_set_text("USART conflict, can't switch to ogpsd", FALSE);
+		status_label_set_text("UART conflict, can't switch to ogpsd", FALSE);
 		UNLOCK_UI();
 		ask_suspend = TRUE;
 	}
 }
 
-static void check_conflict()
+static void check_failure()
 {
 	if (sysfs_get_gps_device_power() != 1) {
 		if (! gps_device_power_on()) {
@@ -392,7 +397,7 @@ static void check_conflict()
 		}
 	} else {
 		if (fso_gypsy_is_running()) {
-			g_context.usart_conflict = TRUE;
+			g_context.uart_conflict = TRUE;
 		}
 	}
 }
@@ -421,8 +426,8 @@ static void poll_by_ubx_binary()
 END:
 
 	if (error) {
-		check_conflict();
-		if (g_context.usart_conflict)
+		check_failure();
+		if (g_context.uart_conflict)
 			switch_to_ogpsd();
 	}
 }
@@ -432,15 +437,17 @@ END:
  */
 static void * poll_gps_data_routine(void *args)
 {
-	/* wait for GUI show */
-	sleep(2);
-
 	sigset_t sig_set;
 	sigemptyset(&sig_set);
 	sigaddset(&sig_set, SIGINT);
 	pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
 
-	pthread_context_t *ctx = register_thread("poll thread", NULL, NULL);
+	if (ctx) {
+		free(ctx);
+		ctx = NULL;
+	}
+
+	ctx = register_thread("poll thread", NULL, NULL);
 
 	ubx_msg_type_t types[] = {
 		{UBX_CLASS_NAV, UBX_ID_NAV_STATUS},
@@ -452,7 +459,13 @@ static void * poll_gps_data_routine(void *args)
 	ubx_set_poll_msg_types(types, sizeof(types)/sizeof(ubx_msg_type_t));
 
 	g_context.time_synced = FALSE;
-	g_context.usart_conflict = FALSE;
+	g_context.uart_conflict = FALSE;
+	running = TRUE;
+
+	ctrl_cmd = NULL;
+	ctrl_cmd_args = NULL;
+	pollsv = FALSE;
+	ask_suspend = FALSE;
 
 	gboolean start_now = TRUE;
 	if (! g_context.run_gps_on_start) {
@@ -487,7 +500,6 @@ gboolean start_poll_thread()
 
 void stop_poll_thread()
 {
-	log_info("stop poll thread...");
 	running = FALSE;
 
 	if (polling_thread_tid != 0) {
@@ -530,8 +542,9 @@ void stop_poll_thread()
 
 				agps_dump_aid_data(FALSE);
 			}
-			usart_cleanup();
+			uart_cleanup();
 		}
+		POLL_STATE_SET(SUSPENDING);
 	}
 
 	log_info("poll thread was stopped");
