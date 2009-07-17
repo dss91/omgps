@@ -392,7 +392,7 @@ GtkWidget * agps_tab_create()
 
 	platmodel_desc = gtk_label_new(platmodel_descs[platmodel_id]);
 	gtk_label_set_selectable(GTK_LABEL(platmodel_desc), FALSE);
-	gtk_widget_modify_fg(platmodel_desc, GTK_STATE_NORMAL, &g_base_colors[ID_COLOR_White]);
+	gtk_widget_modify_fg(platmodel_desc, GTK_STATE_NORMAL, &g_base_colors[ID_COLOR_Gray]);
 	/* troublesome to control label width! */
 	gtk_widget_set_size_request(platmodel_desc, 450, -1);
 	gtk_label_set_justify(GTK_LABEL(platmodel_desc), GTK_JUSTIFY_LEFT);
