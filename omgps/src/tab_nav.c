@@ -100,8 +100,8 @@ static void draw_skymap_fg(GdkDrawable *canvas)
 		if (sv->elevation >= 0 && sv->azimuth >= 0) {
 			r = bg_image_r * (1.0 - sv->elevation / 90.0);
 			deg = sv->azimuth * DEG_TO_RAD;
-			x = center_x - r * cos(deg);
-			y = center_y + r * sin(deg);
+			x = center_x + r * sin(deg);
+			y = center_y - r * cos(deg);
 
 			if (sv->flags & 0x01)
 				xpm_id = XPM_ID_SV_IN_USE;
