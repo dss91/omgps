@@ -67,6 +67,6 @@ omgps_SOURCES =          \
   src/tile_cache.c       \
   src/ubx.c              \
   src/util.c             \
-  src/usart.c            \
+  src/uart.c             \
   src/wgs84.c            \
   src/xpm_image.c
