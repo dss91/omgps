@@ -1,3 +1,14 @@
+= 0.1_svnr105 (20090719) =
+
+   * bug fix: sometimes unable to restore GPS from suspend 
+   * bug fix: sometimes block on GPS initializing
+   * bug fix: incorrect file permission, should set with open(), don't use umask() 
+   * bug fix: issue 11: incorrect satellite position in skymap, thanks to LudwigBrinckmann
+   * defect: remove omgps.pid at exit 
+   * defect: issue 9, don't popup warning dialog while no sound module found
+   * defect: issue 10, change font color for "dynamic platform model"
+   * enhancement: faster GPS initializing
+
 = 0.1_svnr90 (20090625) =
 
    * bugfix: bug #6
