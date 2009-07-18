@@ -1,3 +1,8 @@
+= 0.1_svnr109 (20090719) =
+
+   * bug fix: should load ALM even if EPH was loaded
+   * bug fix: in main view, when full/unfull screen, heading redraw fails
+
 = 0.1_svnr105 (20090719) =
 
    * bug fix: sometimes unable to restore GPS from suspend 
